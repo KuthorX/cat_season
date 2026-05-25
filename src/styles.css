@@ -1,6 +1,6 @@
 @font-face {
   font-family: "LXGW WenKai";
-  src: url("/assets/fonts/LXGWWenKai-Regular.ttf") format("truetype");
+  src: url("../assets/fonts/LXGWWenKai-Regular.ttf") format("truetype");
   font-display: swap;
 }
 
@@ -43,7 +43,7 @@ button {
   background:
     linear-gradient(90deg, rgba(14, 35, 38, 0.5) 0%, rgba(14, 35, 38, 0.18) 44%, rgba(14, 35, 38, 0.48) 100%),
     linear-gradient(0deg, rgba(14, 35, 38, 0.64) 0%, rgba(14, 35, 38, 0.1) 55%),
-    url("/assets/environment/cat-season-bg.png") center / cover no-repeat,
+    url("../assets/environment/cat-season-bg.png") center / cover no-repeat,
     linear-gradient(135deg, #19383f 0%, #244b4a 46%, #822f46 100%);
 }
 

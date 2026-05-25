@@ -27,28 +27,28 @@ export const ASSET_KEYS = {
 };
 
 export const ASSET_PATHS = {
-  background: '/assets/environment/cat-season-bg.png',
+  background: 'assets/environment/cat-season-bg.png',
   tile: {
-    paw: '/assets/tiles/tile-paw.svg',
-    fish: '/assets/tiles/tile-fish.svg',
-    yarn: '/assets/tiles/tile-yarn.svg',
-    bell: '/assets/tiles/tile-bell.svg',
-    milk: '/assets/tiles/tile-milk.svg',
-    cushion: '/assets/tiles/tile-cushion.svg',
-    tuna: '/assets/tiles/tile-tuna.svg',
-    star: '/assets/tiles/tile-star.svg',
+    paw: 'assets/tiles/tile-paw.svg',
+    fish: 'assets/tiles/tile-fish.svg',
+    yarn: 'assets/tiles/tile-yarn.svg',
+    bell: 'assets/tiles/tile-bell.svg',
+    milk: 'assets/tiles/tile-milk.svg',
+    cushion: 'assets/tiles/tile-cushion.svg',
+    tuna: 'assets/tiles/tile-tuna.svg',
+    star: 'assets/tiles/tile-star.svg',
   } satisfies Record<TileKind, string>,
   fx: {
-    pawParticle: '/assets/fx/fx-paw-particle.svg',
-    sparkleParticle: '/assets/fx/fx-sparkle-particle.svg',
+    pawParticle: 'assets/fx/fx-paw-particle.svg',
+    sparkleParticle: 'assets/fx/fx-sparkle-particle.svg',
   },
   audio: {
-    music: '/assets/audio/cozy-puzzle-ingame.ogg',
-    click: '/assets/audio/ui-click.ogg',
-    invalid: '/assets/audio/ui-invalid.ogg',
-    match: '/assets/audio/match-pop.ogg',
-    shuffle: '/assets/audio/shuffle.ogg',
-    hover: '/assets/audio/tile-hover.ogg',
+    music: 'assets/audio/cozy-puzzle-ingame.ogg',
+    click: 'assets/audio/ui-click.ogg',
+    invalid: 'assets/audio/ui-invalid.ogg',
+    match: 'assets/audio/match-pop.ogg',
+    shuffle: 'assets/audio/shuffle.ogg',
+    hover: 'assets/audio/tile-hover.ogg',
   },
 };
 
