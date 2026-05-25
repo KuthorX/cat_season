@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="cat milk tile">
+  <rect width="96" height="96" rx="18" fill="#fff8e8"/>
+  <path d="M32 26h32l-5 50H37L32 26Z" fill="#dceff0"/>
+  <path d="M35 39h26l-4 34H39l-4-34Z" fill="#ffffff"/>
+  <path d="M32 26 39 15h18l7 11" fill="#74bdb8"/>
+  <path d="M42 52c4-8 12-8 16 0-4 8-12 8-16 0Z" fill="#c14f53"/>
+</svg>
