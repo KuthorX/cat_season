@@ -76,6 +76,33 @@ describe('cat puzzle rules', () => {
     expect(result.state.status).toBe('won');
   });
 
+  it('reports only actual falling and refilled cells after a clear', () => {
+    const state = createPuzzle({
+      seed: 11,
+      width: 4,
+      height: 4,
+      moves: 6,
+      goals: { paw: 3 },
+      board: [
+        ['paw', 'fish', 'paw', 'bell'],
+        ['yarn', 'paw', 'milk', 'fish'],
+        ['bell', 'milk', 'yarn', 'milk'],
+        ['fish', 'yarn', 'bell', 'paw'],
+      ],
+    });
+
+    const result = applyMove(state, p(1, 0), p(1, 1));
+
+    expect(result.accepted).toBe(true);
+    expect(result.drops).toEqual([
+      { kind: expect.anything(), to: p(0, 0) },
+      { kind: expect.anything(), to: p(1, 0) },
+      { kind: expect.anything(), to: p(2, 0) },
+    ]);
+    expect(result.drops.every((drop) => drop.from === undefined)).toBe(true);
+    expect(result.drops.some((drop) => drop.from?.x === 3)).toBe(false);
+  });
+
   it('advances to the next round instead of ending when endless goals are cleared', () => {
     const state = createPuzzle({
       seed: 11,

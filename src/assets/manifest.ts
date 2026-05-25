@@ -16,6 +16,14 @@ export const ASSET_KEYS = {
     pawParticle: 'fx-paw-particle',
     sparkleParticle: 'fx-sparkle-particle',
   },
+  audio: {
+    music: 'audio-cozy-puzzle-ingame',
+    click: 'audio-ui-click',
+    invalid: 'audio-ui-invalid',
+    match: 'audio-match-pop',
+    shuffle: 'audio-shuffle',
+    hover: 'audio-tile-hover',
+  },
 };
 
 export const ASSET_PATHS = {
@@ -33,6 +41,14 @@ export const ASSET_PATHS = {
   fx: {
     pawParticle: '/assets/fx/fx-paw-particle.svg',
     sparkleParticle: '/assets/fx/fx-sparkle-particle.svg',
+  },
+  audio: {
+    music: '/assets/audio/cozy-puzzle-ingame.ogg',
+    click: '/assets/audio/ui-click.ogg',
+    invalid: '/assets/audio/ui-invalid.ogg',
+    match: '/assets/audio/match-pop.ogg',
+    shuffle: '/assets/audio/shuffle.ogg',
+    hover: '/assets/audio/tile-hover.ogg',
   },
 };
 

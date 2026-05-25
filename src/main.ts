@@ -5,9 +5,9 @@ import { GameplayScene } from './scenes/GameplayScene';
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   parent: 'game-root',
-  width: 960,
-  height: 640,
-  backgroundColor: '#122227',
+  width: 1440,
+  height: 960,
+  transparent: true,
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -17,7 +17,9 @@ const config: Phaser.Types.Core.GameConfig = {
   },
   render: {
     antialias: true,
+    antialiasGL: true,
     pixelArt: false,
+    roundPixels: false,
   },
   scene: [GameplayScene],
 };

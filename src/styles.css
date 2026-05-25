@@ -1,6 +1,12 @@
+@font-face {
+  font-family: "LXGW WenKai";
+  src: url("/assets/fonts/LXGWWenKai-Regular.ttf") format("truetype");
+  font-display: swap;
+}
+
 :root {
   font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    "LXGW WenKai", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: #173037;
   background: #16333a;
   font-synthesis: none;
@@ -17,7 +23,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  overflow: hidden;
+  overflow: auto;
 }
 
 button {
@@ -25,25 +31,51 @@ button {
 }
 
 #app {
-  --app-pad: clamp(8px, 1.4vw, 14px);
+  --app-pad: clamp(12px, 1.4vw, 24px);
+  --hud-width: clamp(300px, 23vw, 430px);
+  --shell-gap: clamp(12px, 1.2vw, 22px);
+  --shell-height: calc(100vh - var(--app-pad) * 2 - 2px);
   width: 100%;
   height: 100vh;
   padding: var(--app-pad);
   display: grid;
   place-items: center;
   background:
-    radial-gradient(circle at 22% 18%, rgba(255, 196, 112, 0.18), transparent 28%),
+    linear-gradient(90deg, rgba(14, 35, 38, 0.5) 0%, rgba(14, 35, 38, 0.18) 44%, rgba(14, 35, 38, 0.48) 100%),
+    linear-gradient(0deg, rgba(14, 35, 38, 0.64) 0%, rgba(14, 35, 38, 0.1) 55%),
+    url("/assets/environment/cat-season-bg.png") center / cover no-repeat,
     linear-gradient(135deg, #19383f 0%, #244b4a 46%, #822f46 100%);
 }
 
 .game-shell {
-  width: 100%;
-  max-width: 1180px;
-  height: min(100%, calc(100vh - var(--app-pad) * 2 - 2px));
+  width: min(100%, calc(var(--shell-height) * 1.5 + var(--hud-width) + var(--shell-gap)));
+  height: min(var(--shell-height), calc((100vw - var(--app-pad) * 2 - var(--hud-width) - var(--shell-gap)) / 1.5));
+  min-height: 560px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 286px;
-  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) var(--hud-width);
+  gap: var(--shell-gap);
   align-items: stretch;
+  container-type: inline-size;
+}
+
+#app.is-menu-open .game-shell {
+  max-width: none;
+  max-height: none;
+  height: 100%;
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+#app.is-menu-open .stage-panel {
+  height: 100%;
+  aspect-ratio: auto;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+#app.is-menu-open #game-root canvas {
+  display: none;
 }
 
 .stage-panel,
@@ -58,8 +90,10 @@ button {
   position: relative;
   width: 100%;
   height: 100%;
+  align-self: center;
   min-width: 0;
-  background: #13262c;
+  background: transparent;
+  filter: drop-shadow(0 18px 34px rgba(8, 24, 27, 0.25));
 }
 
 #game-root {
@@ -71,21 +105,93 @@ button {
 }
 
 #game-root canvas {
-  width: 100% !important;
-  height: 100% !important;
   max-width: 100%;
   max-height: 100%;
   display: block;
 }
 
+.start-menu {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  align-items: end;
+  justify-items: start;
+  padding: clamp(24px, 5vw, 56px);
+  color: #fff8e8;
+}
+
+.start-menu[hidden],
+.hud-panel[hidden] {
+  display: none;
+}
+
+.menu-content {
+  width: min(520px, 100%);
+  display: grid;
+  gap: 14px;
+  text-shadow: 0 2px 18px rgba(9, 25, 28, 0.54);
+}
+
+.menu-kicker,
+.menu-copy {
+  margin: 0;
+}
+
+.menu-kicker {
+  color: #ffe4aa;
+  font-size: clamp(1rem, 2.3vw, 1.25rem);
+  font-weight: 800;
+}
+
+.menu-content h1 {
+  color: #fff8e8;
+  font-size: clamp(3rem, 9vw, 5.8rem);
+  line-height: 0.95;
+}
+
+.menu-copy {
+  max-width: 24em;
+  color: #fff2d7;
+  font-size: clamp(1.08rem, 2.4vw, 1.35rem);
+  line-height: 1.35;
+}
+
+.menu-start {
+  width: fit-content;
+  min-width: 148px;
+  min-height: 48px;
+  margin-top: 6px;
+  padding: 10px 22px;
+  border: 1px solid rgba(255, 248, 232, 0.58);
+  color: #fff8e8;
+  background: #c14f53;
+  box-shadow: 0 10px 28px rgba(15, 34, 38, 0.26);
+  cursor: pointer;
+  transition:
+    transform 180ms ease-out,
+    background-color 180ms ease-out,
+    box-shadow 180ms ease-out;
+}
+
+.menu-start:hover,
+.menu-start:focus-visible {
+  outline: 3px solid rgba(255, 228, 170, 0.42);
+  outline-offset: 3px;
+  background: #d4615d;
+  box-shadow: 0 14px 32px rgba(15, 34, 38, 0.32);
+  transform: translateY(-1px);
+}
+
 .hud-panel {
   height: 100%;
-  padding: 16px;
+  padding: clamp(16px, 1.5vw, 24px);
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  background: rgba(255, 248, 232, 0.94);
-  backdrop-filter: blur(12px);
+  gap: clamp(10px, 1.1vw, 16px);
+  background:
+    linear-gradient(180deg, rgba(255, 250, 240, 0.96), rgba(247, 238, 219, 0.94));
+  backdrop-filter: blur(14px);
 }
 
 .brand-block {
@@ -114,11 +220,12 @@ h1 {
 
 .stat-box {
   min-width: 0;
-  padding: 10px;
+  padding: 12px;
   display: grid;
   gap: 4px;
-  background: #fffaf0;
+  background: rgba(255, 252, 246, 0.9);
   border: 1px solid rgba(45, 119, 119, 0.24);
+  box-shadow: inset 0 -1px 0 rgba(23, 48, 55, 0.05);
 }
 
 .stat-label {
@@ -145,14 +252,17 @@ h1 {
 }
 
 .goal-row {
-  min-height: 38px;
+  min-height: 42px;
   padding: 7px 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  background: #edf7ef;
+  background: rgba(237, 247, 239, 0.92);
   border-left: 4px solid #2d7777;
+  transition:
+    background-color 180ms ease-out,
+    transform 180ms ease-out;
 }
 
 .goal-name {
@@ -164,8 +274,8 @@ h1 {
 }
 
 .goal-icon {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   flex: 0 0 auto;
   display: block;
 }
@@ -201,7 +311,7 @@ h1 {
 
 .powerup-button {
   width: 100%;
-  min-height: 44px;
+  min-height: 48px;
   padding: 8px 10px;
   border: 1px solid rgba(45, 119, 119, 0.24);
   display: grid;
@@ -212,9 +322,13 @@ h1 {
   gap: 2px 10px;
   align-items: center;
   color: #173037;
-  background: #fffaf0;
+  background: rgba(255, 252, 246, 0.92);
   text-align: left;
   cursor: pointer;
+  transition:
+    border-color 180ms ease-out,
+    background-color 180ms ease-out,
+    transform 180ms ease-out;
 }
 
 .powerup-button:disabled {
@@ -227,6 +341,9 @@ h1 {
 .powerup-button:not(:disabled):focus-visible {
   outline: 3px solid rgba(32, 183, 179, 0.3);
   outline-offset: 1px;
+  border-color: rgba(32, 183, 179, 0.5);
+  background: #fffdf8;
+  transform: translateY(-1px);
 }
 
 .powerup-name {
@@ -263,6 +380,10 @@ h1 {
   background: #fffaf0;
   border: 1px solid rgba(23, 48, 55, 0.18);
   cursor: pointer;
+  transition:
+    transform 180ms ease-out,
+    background-color 180ms ease-out,
+    border-color 180ms ease-out;
 }
 
 .icon-button svg {
@@ -285,13 +406,18 @@ h1 {
 .icon-button:focus-visible {
   outline: 3px solid rgba(32, 183, 179, 0.38);
   outline-offset: 2px;
+  border-color: rgba(32, 183, 179, 0.45);
+  transform: translateY(-1px);
+}
+
+@media (min-width: 1440px) {
+  #app {
+    --hud-width: clamp(360px, 21vw, 440px);
+    --shell-gap: clamp(16px, 1vw, 24px);
+  }
 }
 
 @media (max-width: 900px) {
-  body {
-    overflow: auto;
-  }
-
   #app {
     height: auto;
     min-height: 100vh;
@@ -300,7 +426,10 @@ h1 {
   }
 
   .game-shell {
+    width: 100%;
     grid-template-columns: 1fr;
+    max-height: none;
+    min-height: 0;
     height: auto;
     gap: 0;
   }
@@ -313,13 +442,53 @@ h1 {
     box-shadow: none;
   }
 
+  .start-menu {
+    align-items: end;
+    padding: 22px;
+  }
+
   .hud-panel {
     border: 0;
     box-shadow: none;
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .menu-start,
+  .powerup-button,
+  .icon-button,
+  .goal-row {
+    transition: none;
+  }
+
+  .menu-start:hover,
+  .menu-start:focus-visible,
+  .powerup-button:not(:disabled):hover,
+  .powerup-button:not(:disabled):focus-visible,
+  .icon-button:hover,
+  .icon-button:focus-visible {
+    transform: none;
+  }
+}
+
 @media (max-width: 560px) {
+  .menu-content {
+    gap: 10px;
+  }
+
+  .menu-content h1 {
+    font-size: 2.6rem;
+  }
+
+  .menu-copy {
+    font-size: 1rem;
+  }
+
+  .menu-start {
+    min-height: 44px;
+    padding: 8px 18px;
+  }
+
   .hud-panel {
     padding: 18px;
   }

@@ -12,23 +12,29 @@ import {
   type PowerUpKind,
   type PuzzleState,
   type ShuffleMove,
+  type TileDrop,
   type TileKind,
 } from '../systems/catPuzzle';
 import { HudController } from '../ui/hud';
 
 const BOARD_SIZE = 7;
-const TILE_SIZE = 68;
-const TILE_GAP = 8;
-const BOARD_PADDING = 24;
-const BOARD_X = 232;
-const BOARD_Y = 72;
+const TILE_SIZE = 112;
+const TILE_GAP = 12;
+const BOARD_PADDING = 28;
+const BOARD_X = 292;
+const BOARD_Y = 56;
+const TILE_TEXTURE_SIZE = 256;
+const TILE_ICON_SIZE = 78;
 
 type TileView = {
   container: Phaser.GameObjects.Container;
+  content: Phaser.GameObjects.Container;
   shadow: Phaser.GameObjects.Ellipse;
   bg: Phaser.GameObjects.Rectangle;
   sprite: Phaser.GameObjects.Image;
   kind: TileKind;
+  scaleTween?: Phaser.Tweens.Tween;
+  invalidTween?: Phaser.Tweens.Tween;
 };
 
 export class GameplayScene extends Phaser.Scene {
@@ -38,12 +44,17 @@ export class GameplayScene extends Phaser.Scene {
   private tileViews = new Map<string, TileView>();
   private activeTimers: Phaser.Time.TimerEvent[] = [];
   private hintGraphics?: Phaser.GameObjects.Graphics;
+  private boardFrame?: Phaser.GameObjects.Container;
   private boardLayer?: Phaser.GameObjects.Container;
   private boardInputZone?: Phaser.GameObjects.Zone;
   private pendingPowerUp?: PowerUpKind;
   private inputLocked = false;
   private hovered?: GridPoint;
   private lastBoardSignature?: string;
+  private music?: Phaser.Sound.BaseSound;
+  private audioStarted = false;
+  private menuRoot?: HTMLElement;
+  private startButton?: HTMLButtonElement;
 
   constructor() {
     super('gameplay');
@@ -52,28 +63,35 @@ export class GameplayScene extends Phaser.Scene {
   preload(): void {
     this.load.image(ASSET_KEYS.background, ASSET_PATHS.background);
     for (const kind of TILE_KINDS) {
-      this.load.svg(ASSET_KEYS.tile[kind], ASSET_PATHS.tile[kind], { width: 96, height: 96 });
+      this.load.svg(ASSET_KEYS.tile[kind], ASSET_PATHS.tile[kind], { width: TILE_TEXTURE_SIZE, height: TILE_TEXTURE_SIZE });
     }
-    this.load.svg(ASSET_KEYS.fx.pawParticle, ASSET_PATHS.fx.pawParticle, { width: 32, height: 32 });
-    this.load.svg(ASSET_KEYS.fx.sparkleParticle, ASSET_PATHS.fx.sparkleParticle, { width: 32, height: 32 });
+    this.load.svg(ASSET_KEYS.fx.pawParticle, ASSET_PATHS.fx.pawParticle, { width: 96, height: 96 });
+    this.load.svg(ASSET_KEYS.fx.sparkleParticle, ASSET_PATHS.fx.sparkleParticle, { width: 96, height: 96 });
+    this.load.audio(ASSET_KEYS.audio.music, ASSET_PATHS.audio.music);
+    this.load.audio(ASSET_KEYS.audio.click, ASSET_PATHS.audio.click);
+    this.load.audio(ASSET_KEYS.audio.invalid, ASSET_PATHS.audio.invalid);
+    this.load.audio(ASSET_KEYS.audio.match, ASSET_PATHS.audio.match);
+    this.load.audio(ASSET_KEYS.audio.shuffle, ASSET_PATHS.audio.shuffle);
+    this.load.audio(ASSET_KEYS.audio.hover, ASSET_PATHS.audio.hover);
   }
 
   create(): void {
-    this.cameras.main.setRoundPixels(true);
-    this.createBackdrop();
-    this.createBoardFrame();
+    this.cameras.main.setRoundPixels(false);
     this.createHud();
-    this.startNewPuzzle();
+    this.setupAudio();
+    this.showStartMenu();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.cleanupGameState({ destroyHud: true, removeDocumentListeners: true }));
     this.events.once(Phaser.Scenes.Events.DESTROY, () => this.cleanupGameState({ destroyHud: true, removeDocumentListeners: true }));
     document.addEventListener('visibilitychange', this.handleVisibilityChange);
   }
 
   private startNewPuzzle = (): void => {
+    this.hideStartMenu();
     this.cleanupGameState({ keepHud: true });
     this.state = this.createRandomPuzzle();
     this.lastBoardSignature = this.boardSignature(this.state.board);
 
+    this.createBoardFrame();
     this.boardLayer = this.add.container(0, 0).setDepth(10);
     this.createBoardInputZone();
     this.renderBoard();
@@ -138,24 +156,21 @@ export class GameplayScene extends Phaser.Scene {
     return board.map((row) => row.join('|')).join('/');
   }
 
-  private createBackdrop(): void {
-    const bg = this.add.image(480, 320, ASSET_KEYS.background);
-    bg.setDisplaySize(960, 640);
-    bg.setAlpha(0.95);
-
-    this.add.rectangle(480, 320, 960, 640, 0x13272b, 0.32);
-    this.add.rectangle(480, 320, 960, 640, 0xf8efe2, 0.1);
-  }
-
   private createBoardFrame(): void {
+    this.boardFrame?.destroy(true);
     const width = BOARD_SIZE * TILE_SIZE + (BOARD_SIZE - 1) * TILE_GAP + BOARD_PADDING * 2;
     const height = width;
     const x = BOARD_X + width / 2 - BOARD_PADDING;
     const y = BOARD_Y + height / 2 - BOARD_PADDING;
 
-    this.add.rectangle(x + 8, y + 12, width, height, 0x102229, 0.34).setDepth(1);
-    this.add.rectangle(x, y, width, height, 0xfff4df, 0.88).setDepth(2);
-    this.add.rectangle(x, y, width - 12, height - 12, 0x223f45, 0.12).setDepth(3);
+    this.boardFrame = this.add.container(0, 0).setDepth(1);
+    const shadow = this.add.rectangle(x + 14, y + 18, width, height, 0x102229, 0.34);
+    const panel = this.add.rectangle(x, y, width, height, 0xfff4df, 0.82);
+    const inner = this.add.rectangle(x, y, width - 18, height - 18, 0xfffbf1, 0.28);
+    panel.setStrokeStyle(5, 0xfff0c7, 0.78);
+    inner.setStrokeStyle(2, 0x2d7777, 0.2);
+
+    this.boardFrame.add([shadow, panel, inner]);
   }
 
   private createHud(): void {
@@ -170,6 +185,80 @@ export class GameplayScene extends Phaser.Scene {
       onPowerUp: this.selectPowerUp,
     });
     this.hud.mount();
+    root.hidden = true;
+  }
+
+  private showStartMenu(): void {
+    const root = document.getElementById('menu-root');
+    if (!root) {
+      throw new Error('Missing #menu-root');
+    }
+
+    this.menuRoot = root;
+    document.getElementById('app')?.classList.add('is-menu-open');
+    root.hidden = false;
+    root.innerHTML = `
+      <div class="menu-content">
+        <p class="menu-kicker">秋日猫咪消消乐</p>
+        <h1>猫咪季节</h1>
+        <p class="menu-copy">整理猫爪、小鱼和毛线，把窗边的小物一件件收好。</p>
+        <button class="menu-start" type="button">开始游戏</button>
+      </div>
+    `;
+
+    this.startButton = root.querySelector<HTMLButtonElement>('.menu-start') ?? undefined;
+    this.startButton?.addEventListener('click', this.handleStartClick);
+  }
+
+  private hideStartMenu(): void {
+    this.startButton?.removeEventListener('click', this.handleStartClick);
+    this.startButton = undefined;
+    if (this.menuRoot) {
+      this.menuRoot.hidden = true;
+      this.menuRoot.innerHTML = '';
+    }
+    document.getElementById('app')?.classList.remove('is-menu-open');
+
+    const hudRoot = document.getElementById('hud-root');
+    if (hudRoot) {
+      hudRoot.hidden = false;
+    }
+  }
+
+  private handleStartClick = (): void => {
+    this.ensureAudioStarted();
+    this.playSound(ASSET_KEYS.audio.click, { volume: 0.42 });
+    this.startNewPuzzle();
+  };
+
+  private setupAudio(): void {
+    this.music = this.sound.add(ASSET_KEYS.audio.music, {
+      loop: true,
+      volume: 0.18,
+    });
+
+    if (!this.sound.locked) {
+      this.ensureAudioStarted();
+      return;
+    }
+
+    this.sound.once(Phaser.Sound.Events.UNLOCKED, this.ensureAudioStarted);
+  }
+
+  private ensureAudioStarted = (): void => {
+    if (this.audioStarted || !this.music) {
+      return;
+    }
+
+    this.audioStarted = this.music.isPlaying || this.music.play();
+  };
+
+  private playSound(key: string, config?: Phaser.Types.Sound.SoundConfig): void {
+    if (!this.audioStarted || this.sound.mute) {
+      return;
+    }
+
+    this.sound.play(key, config);
   }
 
   private renderBoard(board: Board = this.state.board): void {
@@ -186,14 +275,16 @@ export class GameplayScene extends Phaser.Scene {
   private createTileView(point: GridPoint, kind: TileKind): void {
     const { x, y } = this.cellToWorld(point);
     const container = this.add.container(x, y).setSize(TILE_SIZE, TILE_SIZE);
-    const shadow = this.add.ellipse(2, 6, TILE_SIZE * 0.86, TILE_SIZE * 0.72, 0x153238, 0.15);
+    const content = this.add.container(0, 0).setSize(TILE_SIZE, TILE_SIZE);
+    const shadow = this.add.ellipse(3, 8, TILE_SIZE * 0.86, TILE_SIZE * 0.72, 0x153238, 0.16);
     const bg = this.add.rectangle(0, 0, TILE_SIZE, TILE_SIZE, 0xfff8e8, 0.98);
-    const sprite = this.add.image(0, 0, ASSET_KEYS.tile[kind]).setDisplaySize(50, 50);
+    const sprite = this.add.image(0, 0, ASSET_KEYS.tile[kind]).setDisplaySize(TILE_ICON_SIZE, TILE_ICON_SIZE);
 
     bg.setStrokeStyle(2, 0x2f5861, 0.2);
-    container.add([shadow, bg, sprite]);
+    content.add([shadow, bg, sprite]);
+    container.add(content);
     this.boardLayer?.add(container);
-    this.tileViews.set(this.key(point), { container, shadow, bg, sprite, kind });
+    this.tileViews.set(this.key(point), { container, content, shadow, bg, sprite, kind });
   }
 
   private createBoardInputZone(): void {
@@ -226,6 +317,7 @@ export class GameplayScene extends Phaser.Scene {
       return;
     }
 
+    this.ensureAudioStarted();
     this.clearHint();
     if (this.pendingPowerUp) {
       this.applyPowerUp(this.pendingPowerUp, point);
@@ -234,11 +326,13 @@ export class GameplayScene extends Phaser.Scene {
 
     const selected = this.selected;
     if (!selected) {
+      this.playSound(ASSET_KEYS.audio.click, { volume: 0.38 });
       this.setSelected(point);
       return;
     }
 
     if (this.pointsEqual(selected, point)) {
+      this.playSound(ASSET_KEYS.audio.click, { volume: 0.3 });
       this.setSelected(undefined);
       return;
     }
@@ -247,6 +341,7 @@ export class GameplayScene extends Phaser.Scene {
     const boardAfterSwap = this.boardAfterSwap(boardBeforeMove, selected, point);
     const result = applyMove(this.state, selected, point);
     if (!result.accepted) {
+      this.playSound(ASSET_KEYS.audio.invalid, { volume: 0.42 });
       this.setSelected(point);
       this.signalInvalid(point, pointerId);
       return;
@@ -256,17 +351,17 @@ export class GameplayScene extends Phaser.Scene {
     this.state = result.state;
     this.setSelected(undefined);
     this.setHovered(undefined);
+    this.playSound(ASSET_KEYS.audio.match, { volume: 0.46 });
     this.animateAcceptedMove(selected, point, result.initialMatches);
     const timer = this.time.delayedCall(720, () => {
       const targetBoard = result.boardBeforeRepair ?? result.state.board;
       this.renderBoard(targetBoard);
-      this.animateBoardArrival(boardAfterSwap, targetBoard, {
-        blockedSourceCells: result.affectedCells,
-      });
+      this.animateTileDrops(result.drops, targetBoard, boardAfterSwap);
       this.finishBoardUpdate({
         boardBeforeRepair: result.boardBeforeRepair,
         finalState: result.state,
         shuffleMoves: result.shuffleMoves,
+        drops: [],
         delay: result.boardBeforeRepair ? 540 : 460,
       });
     });
@@ -390,13 +485,23 @@ export class GameplayScene extends Phaser.Scene {
       return;
     }
 
-    this.tweens.add({
-      targets: view.container,
-      x: view.container.x + (pointerId % 2 === 0 ? 6 : -6),
+    view.invalidTween?.stop();
+    view.content.x = 0;
+    view.invalidTween = this.tweens.add({
+      targets: view.content,
+      x: pointerId % 2 === 0 ? 6 : -6,
       yoyo: true,
       repeat: 2,
       duration: 42,
       ease: 'Sine.easeInOut',
+      onComplete: () => {
+        view.content.x = 0;
+        view.invalidTween = undefined;
+      },
+      onStop: () => {
+        view.content.x = 0;
+        view.invalidTween = undefined;
+      },
     });
   }
 
@@ -446,6 +551,7 @@ export class GameplayScene extends Phaser.Scene {
       this.syncTileVisual(previous);
     }
     if (point) {
+      this.playSound(ASSET_KEYS.audio.hover, { volume: 0.12 });
       this.syncTileVisual(point);
     }
   }
@@ -464,12 +570,19 @@ export class GameplayScene extends Phaser.Scene {
     const strokeWidth = isSelected ? 4 : isHovered ? 3 : 2;
 
     view.bg.setStrokeStyle(strokeWidth, strokeColor, strokeAlpha);
-    this.tweens.killTweensOf(view.container);
-    this.tweens.add({
-      targets: view.container,
+    view.scaleTween?.stop();
+    view.content.x = view.invalidTween ? view.content.x : 0;
+    view.scaleTween = this.tweens.add({
+      targets: view.content,
       scale: targetScale,
       duration: 120,
       ease: 'Back.easeOut',
+      onComplete: () => {
+        view.scaleTween = undefined;
+      },
+      onStop: () => {
+        view.scaleTween = undefined;
+      },
     });
   }
 
@@ -478,6 +591,8 @@ export class GameplayScene extends Phaser.Scene {
       return;
     }
 
+    this.ensureAudioStarted();
+    this.playSound(ASSET_KEYS.audio.click, { volume: 0.28 });
     this.clearHint();
     const hint = findSuggestedMove(this.state);
     if (!hint) {
@@ -496,6 +611,8 @@ export class GameplayScene extends Phaser.Scene {
       return;
     }
 
+    this.ensureAudioStarted();
+    this.playSound(ASSET_KEYS.audio.click, { volume: 0.36 });
     if (kind === 'snack') {
       const result = usePowerUp(this.state, kind);
       if (result.accepted) {
@@ -506,6 +623,7 @@ export class GameplayScene extends Phaser.Scene {
             boardBeforeRepair: result.boardBeforeRepair,
             finalState: result.state,
             shuffleMoves: result.shuffleMoves,
+            drops: [],
             delay: 120,
           });
           return;
@@ -527,6 +645,7 @@ export class GameplayScene extends Phaser.Scene {
     const result = usePowerUp(this.state, kind, point);
     this.pendingPowerUp = undefined;
     if (!result.accepted) {
+      this.playSound(ASSET_KEYS.audio.invalid, { volume: 0.42 });
       this.signalInvalid(point, 1);
       this.updateHud();
       return;
@@ -536,17 +655,17 @@ export class GameplayScene extends Phaser.Scene {
     this.state = result.state;
     this.setSelected(undefined);
     this.setHovered(undefined);
+    this.playSound(ASSET_KEYS.audio.match, { volume: 0.46, detune: kind === 'wand' ? 80 : -60 });
     this.animateClearCells(result.affectedCells);
     const timer = this.time.delayedCall(520, () => {
       const targetBoard = result.boardBeforeRepair ?? result.state.board;
       this.renderBoard(targetBoard);
-      this.animateBoardArrival(boardBeforePowerUp, targetBoard, {
-        blockedSourceCells: result.affectedCells,
-      });
+      this.animateTileDrops(result.drops, targetBoard, boardBeforePowerUp);
       this.finishBoardUpdate({
         boardBeforeRepair: result.boardBeforeRepair,
         finalState: result.state,
         shuffleMoves: result.shuffleMoves,
+        drops: [],
         delay: result.boardBeforeRepair ? 520 : 430,
       });
     });
@@ -557,6 +676,7 @@ export class GameplayScene extends Phaser.Scene {
     boardBeforeRepair?: Board;
     finalState: PuzzleState;
     shuffleMoves: ShuffleMove[];
+    drops: TileDrop[];
     delay: number;
   }): void {
     const timer = this.time.delayedCall(options.delay, () => {
@@ -570,7 +690,7 @@ export class GameplayScene extends Phaser.Scene {
 
       if (options.boardBeforeRepair) {
         this.renderBoard(options.finalState.board);
-        this.animateBoardArrival(options.boardBeforeRepair, options.finalState.board, { intro: false });
+        this.animateTileDrops(options.drops, options.finalState.board, options.boardBeforeRepair);
       }
       this.updateHud();
       this.inputLocked = false;
@@ -581,11 +701,8 @@ export class GameplayScene extends Phaser.Scene {
   private animateBoardArrival(
     sourceBoard: Board | undefined,
     targetBoard: Board,
-    options: { blockedSourceCells?: GridPoint[]; intro?: boolean } = {},
+    options: { intro?: boolean } = {},
   ): void {
-    const blocked = new Set((options.blockedSourceCells ?? []).map((cell) => this.key(cell)));
-    const sources = sourceBoard ? this.collectSourceCells(sourceBoard, blocked) : new Map<TileKind, GridPoint[]>();
-
     for (let y = 0; y < targetBoard.length; y += 1) {
       for (let x = 0; x < (targetBoard[y]?.length ?? 0); x += 1) {
         const point = { x, y };
@@ -595,19 +712,17 @@ export class GameplayScene extends Phaser.Scene {
         }
 
         const target = this.cellToWorld(point);
-        const source = sources.get(view.kind)?.shift();
-        const isSameCell = source && this.pointsEqual(source, point);
-        const sourceWorld = source && !isSameCell
-          ? this.cellToWorld(source)
+        const sourceWorld = sourceBoard
+          ? { x: target.x, y: target.y - 18 }
           : {
               x: target.x + (options.intro ? Phaser.Math.Between(-10, 10) : 0),
-              y: options.intro ? target.y - Phaser.Math.Between(42, 96) : target.y - 18,
+              y: options.intro ? target.y - Phaser.Math.Between(64, 130) : target.y - 24,
             };
 
         view.container.setPosition(sourceWorld.x, sourceWorld.y);
-        view.container.setAlpha(isSameCell ? 0.92 : 0.58);
-        view.container.setScale(isSameCell ? 0.96 : 0.78);
-        view.container.setAngle(source && !isSameCell ? Phaser.Math.Between(-6, 6) : 0);
+        view.container.setAlpha(0.58);
+        view.container.setScale(0.78);
+        view.container.setAngle(0);
         this.tweens.add({
           targets: view.container,
           x: target.x,
@@ -615,11 +730,51 @@ export class GameplayScene extends Phaser.Scene {
           alpha: 1,
           scale: 1,
           angle: 0,
-          duration: source && !isSameCell ? 360 : 430,
-          delay: y * 22 + x * 5,
-          ease: source && !isSameCell ? 'Back.easeOut' : 'Bounce.easeOut',
+          duration: 360,
+          delay: y * 20 + x * 4,
+          ease: 'Back.easeOut',
         });
       }
+    }
+  }
+
+  private animateTileDrops(drops: TileDrop[], targetBoard: Board, sourceBoard: Board): void {
+    if (drops.length === 0) {
+      return;
+    }
+
+    const latestDropByTarget = new Map<string, TileDrop>();
+    for (const drop of drops) {
+      latestDropByTarget.set(this.key(drop.to), drop);
+    }
+
+    for (const drop of latestDropByTarget.values()) {
+      const view = this.tileViews.get(this.key(drop.to));
+      if (!view || targetBoard[drop.to.y]?.[drop.to.x] !== drop.kind) {
+        continue;
+      }
+
+      const target = this.cellToWorld(drop.to);
+      const source = drop.from && sourceBoard[drop.from.y]?.[drop.from.x] === drop.kind
+        ? this.cellToWorld(drop.from)
+        : { x: target.x, y: BOARD_Y - TILE_SIZE * 0.7 };
+      const distance = Math.abs(source.y - target.y);
+
+      view.container.setPosition(source.x, source.y);
+      view.container.setAlpha(drop.from ? 0.98 : 0.42);
+      view.container.setScale(drop.from ? 0.98 : 0.84);
+      view.container.setAngle(drop.from ? 0 : Phaser.Math.Between(-3, 3));
+      this.tweens.add({
+        targets: view.container,
+        x: target.x,
+        y: target.y,
+        alpha: 1,
+        scale: 1,
+        angle: 0,
+        duration: Phaser.Math.Clamp(180 + distance * 1.15, 240, 420),
+        delay: drop.to.y * 14 + drop.to.x * 3,
+        ease: drop.from ? 'Cubic.easeOut' : 'Back.easeOut',
+      });
     }
   }
 
@@ -631,6 +786,7 @@ export class GameplayScene extends Phaser.Scene {
   ): void {
     this.renderBoard(boardBeforeRepair);
     this.cameras.main.shake(130, 0.002);
+    this.playSound(ASSET_KEYS.audio.shuffle, { volume: 0.36 });
 
     if (shuffleMoves.length === 0) {
       this.renderBoard(finalState.board);
@@ -661,49 +817,12 @@ export class GameplayScene extends Phaser.Scene {
           remaining -= 1;
           if (remaining === 0) {
             this.renderBoard(finalState.board);
-            this.animateBoardArrival(boardBeforeRepair, finalState.board, { intro: false });
             onComplete();
           }
         },
       });
     }
 
-    for (let y = 0; y < finalState.height; y += 1) {
-      for (let x = 0; x < finalState.width; x += 1) {
-        const point = { x, y };
-        if (shuffleMoves.some((move) => this.pointsEqual(move.from, point))) {
-          continue;
-        }
-        const view = this.tileViews.get(this.key(point));
-        if (view) {
-          this.tweens.add({
-            targets: view.container,
-            scale: 1.04,
-            yoyo: true,
-            duration: 140,
-            delay: Phaser.Math.Between(40, 180),
-            ease: 'Sine.easeInOut',
-          });
-        }
-      }
-    }
-  }
-
-  private collectSourceCells(board: Board, blocked: Set<string>): Map<TileKind, GridPoint[]> {
-    const sources = new Map<TileKind, GridPoint[]>();
-    for (let y = 0; y < board.length; y += 1) {
-      for (let x = 0; x < (board[y]?.length ?? 0); x += 1) {
-        const point = { x, y };
-        if (blocked.has(this.key(point))) {
-          continue;
-        }
-        const kind = board[y][x];
-        const cells = sources.get(kind) ?? [];
-        cells.push(point);
-        sources.set(kind, cells);
-      }
-    }
-    return sources;
   }
 
   private showBoardTargetPrompt(kind: PowerUpKind): void {
@@ -745,10 +864,13 @@ export class GameplayScene extends Phaser.Scene {
     this.activeTimers = [];
     this.clearHint();
     this.setSelected(undefined);
+    this.hideStartMenu();
     this.tileViews.forEach((view) => view.container.destroy(true));
     this.tileViews.clear();
     this.boardInputZone?.destroy();
     this.boardInputZone = undefined;
+    this.boardFrame?.destroy(true);
+    this.boardFrame = undefined;
     this.boardLayer?.destroy(true);
     this.boardLayer = undefined;
     this.pendingPowerUp = undefined;
@@ -758,10 +880,14 @@ export class GameplayScene extends Phaser.Scene {
     if (opts.destroyHud || !opts.keepHud) {
       this.hud?.destroy();
       this.hud = undefined;
+      this.music?.destroy();
+      this.music = undefined;
+      this.audioStarted = false;
     }
 
     if (opts.removeDocumentListeners) {
       document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+      this.sound.off(Phaser.Sound.Events.UNLOCKED, this.ensureAudioStarted);
     }
   }
 

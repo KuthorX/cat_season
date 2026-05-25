@@ -41,6 +41,12 @@ export type ShuffleMove = {
   to: GridPoint;
 };
 
+export type TileDrop = {
+  kind: TileKind;
+  from?: GridPoint;
+  to: GridPoint;
+};
+
 export type CreatePuzzleOptions = {
   seed: number;
   width: number;
@@ -64,6 +70,7 @@ export type MoveResult = {
   repaired: boolean;
   rewardedPowerUp?: PowerUpKind;
   shuffleMoves: ShuffleMove[];
+  drops: TileDrop[];
   boardBeforeRepair?: Board;
   state: PuzzleState;
 };
@@ -76,6 +83,7 @@ export type PowerUpResult = {
   repaired: boolean;
   rewardedPowerUp?: PowerUpKind;
   shuffleMoves: ShuffleMove[];
+  drops: TileDrop[];
   boardBeforeRepair?: Board;
   state: PuzzleState;
 };
@@ -147,6 +155,7 @@ export function applyMove(state: PuzzleState, from: GridPoint, to: GridPoint): M
   const cleared: Goals = {};
   let cascades = 0;
   let allMatches: Match[] = [];
+  let drops: TileDrop[] = [];
   let matches = firstMatches;
 
   while (matches.length > 0) {
@@ -154,7 +163,7 @@ export function applyMove(state: PuzzleState, from: GridPoint, to: GridPoint): M
     allMatches = allMatches.concat(matches);
     collectCleared(cleared, matches);
     clearMatches(nextBoard, matches);
-    collapseAndFill(nextBoard, random);
+    drops = drops.concat(collapseAndFill(nextBoard, random));
     matches = findMatches(nextBoard);
   }
 
@@ -182,6 +191,7 @@ export function applyMove(state: PuzzleState, from: GridPoint, to: GridPoint): M
     repaired: repaired.repaired,
     rewardedPowerUp: repaired.rewardedPowerUp,
     shuffleMoves: repaired.shuffleMoves,
+    drops,
     boardBeforeRepair: repaired.boardBeforeRepair,
     state: repaired.state,
   };
@@ -203,6 +213,7 @@ export function usePowerUp(state: PuzzleState, kind: PowerUpKind, target?: GridP
       affectedCells: [],
       repaired: false,
       shuffleMoves: [],
+      drops: [],
       state: {
         ...state,
         movesLeft: state.movesLeft + 5,
@@ -224,15 +235,16 @@ export function usePowerUp(state: PuzzleState, kind: PowerUpKind, target?: GridP
   const random: RandomState = { seed: state.seed };
   const board = cloneBoard(state.board);
   const cleared = collectCells(board, affectedCells);
+  let drops: TileDrop[] = [];
 
   clearCells(board, affectedCells);
-  collapseAndFill(board, random);
+  drops = drops.concat(collapseAndFill(board, random));
 
   let matches = findMatches(board);
   while (matches.length > 0) {
     collectCleared(cleared, matches);
     clearMatches(board, matches);
-    collapseAndFill(board, random);
+    drops = drops.concat(collapseAndFill(board, random));
     matches = findMatches(board);
   }
 
@@ -254,6 +266,7 @@ export function usePowerUp(state: PuzzleState, kind: PowerUpKind, target?: GridP
     repaired: repaired.repaired,
     rewardedPowerUp: repaired.rewardedPowerUp,
     shuffleMoves: repaired.shuffleMoves,
+    drops,
     boardBeforeRepair: repaired.boardBeforeRepair,
     state: repaired.state,
   };
@@ -376,6 +389,7 @@ function rejected(state: PuzzleState, reason: MoveResult['reason']): MoveResult 
     cascades: 0,
     repaired: false,
     shuffleMoves: [],
+    drops: [],
     state,
   };
 }
@@ -388,6 +402,7 @@ function rejectedPowerUp(state: PuzzleState, reason: PowerUpResult['reason']): P
     affectedCells: [],
     repaired: false,
     shuffleMoves: [],
+    drops: [],
     state,
   };
 }
@@ -547,23 +562,44 @@ function pickStableTile(board: Board, x: number, y: number, random: RandomState)
   return candidates[nextInt(random, candidates.length)];
 }
 
-function collapseAndFill(board: Board, random: RandomState): void {
+function collapseAndFill(board: Board, random: RandomState): TileDrop[] {
   const height = board.length;
   const width = board[0]?.length ?? 0;
+  const drops: TileDrop[] = [];
 
   for (let x = 0; x < width; x += 1) {
-    const column: TileKind[] = [];
+    const column: Array<{ kind: TileKind; from: GridPoint }> = [];
     for (let y = height - 1; y >= 0; y -= 1) {
       const tile = board[y][x];
       if (tile) {
-        column.push(tile);
+        column.push({ kind: tile, from: { x, y } });
       }
     }
 
     for (let y = height - 1; y >= 0; y -= 1) {
-      board[y][x] = column.shift() ?? TILE_KINDS[nextInt(random, TILE_KINDS.length)];
+      const tile = column.shift();
+      if (tile) {
+        board[y][x] = tile.kind;
+        if (tile.from.y !== y) {
+          drops.push({
+            kind: tile.kind,
+            from: tile.from,
+            to: { x, y },
+          });
+        }
+        continue;
+      }
+
+      const kind = TILE_KINDS[nextInt(random, TILE_KINDS.length)];
+      board[y][x] = kind;
+      drops.push({
+        kind,
+        to: { x, y },
+      });
     }
   }
+
+  return drops;
 }
 
 function resolveProgress(state: PuzzleState): PuzzleState {

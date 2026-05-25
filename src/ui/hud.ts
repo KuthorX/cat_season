@@ -134,7 +134,7 @@ export class HudController {
     }
 
     if (state.status === 'won') {
-      result.textContent = '本局猫咪小物已经全部收好。';
+      result.textContent = '本局猫咪小物已经全部收好了。';
       result.dataset.status = 'won';
       return;
     }
