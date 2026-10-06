@@ -192,6 +192,7 @@ button {
   background:
     linear-gradient(180deg, rgba(255, 250, 240, 0.96), rgba(247, 238, 219, 0.94));
   backdrop-filter: blur(14px);
+  overflow-y: auto;
 }
 
 .brand-block {
@@ -410,10 +411,87 @@ h1 {
   transform: translateY(-1px);
 }
 
+.lang-toggle {
+  min-height: 44px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(23, 48, 55, 0.18);
+  color: #8c7c72;
+  background: #fffaf0;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    transform 180ms ease-out,
+    border-color 180ms ease-out;
+}
+
+.lang-toggle .is-active {
+  color: #173037;
+  font-weight: 800;
+}
+
+.lang-toggle:hover,
+.lang-toggle:focus-visible {
+  outline: 3px solid rgba(32, 183, 179, 0.38);
+  outline-offset: 2px;
+  border-color: rgba(32, 183, 179, 0.45);
+  transform: translateY(-1px);
+}
+
+.hud-lang-toggle {
+  margin-left: auto;
+}
+
+.menu-lang-toggle {
+  position: absolute;
+  top: clamp(16px, 3vw, 32px);
+  right: clamp(16px, 3vw, 32px);
+  border-color: rgba(255, 248, 232, 0.58);
+  color: rgba(255, 242, 215, 0.72);
+  background: rgba(23, 48, 55, 0.42);
+  text-shadow: none;
+}
+
+.menu-lang-toggle .is-active {
+  color: #fff8e8;
+}
+
 @media (min-width: 1440px) {
   #app {
     --hud-width: clamp(360px, 21vw, 440px);
     --shell-gap: clamp(16px, 1vw, 24px);
+  }
+}
+
+@media (min-width: 901px) and (max-height: 1000px) {
+  .hud-panel {
+    gap: 8px;
+  }
+
+  .stat-box {
+    padding: 8px 10px;
+  }
+
+  .goal-row {
+    min-height: 34px;
+    padding: 4px 10px;
+  }
+
+  .goal-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .powerup-button {
+    min-height: 42px;
+    padding: 5px 10px;
+  }
+
+  .result-line {
+    min-height: 0;
   }
 }
 
@@ -455,6 +533,7 @@ h1 {
 
 @media (prefers-reduced-motion: reduce) {
   .menu-start,
+  .lang-toggle,
   .powerup-button,
   .icon-button,
   .goal-row {
@@ -463,6 +542,8 @@ h1 {
 
   .menu-start:hover,
   .menu-start:focus-visible,
+  .lang-toggle:hover,
+  .lang-toggle:focus-visible,
   .powerup-button:not(:disabled):hover,
   .powerup-button:not(:disabled):focus-visible,
   .icon-button:hover,

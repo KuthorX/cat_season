@@ -51,26 +51,3 @@ export const ASSET_PATHS = {
     hover: 'assets/audio/tile-hover.ogg',
   },
 };
-
-export const TILE_LABELS: Record<TileKind, string> = {
-  paw: '猫爪',
-  fish: '小鱼',
-  yarn: '毛线',
-  bell: '铃铛',
-  milk: '猫奶',
-  cushion: '软垫',
-  tuna: '金枪鱼',
-  star: '星星',
-};
-
-export const POWER_UP_LABELS = {
-  snack: '猫薄荷',
-  wand: '逗猫棒',
-  stamp: '爪印章',
-} as const;
-
-export const POWER_UP_DESCRIPTIONS = {
-  snack: '增加 5 步',
-  wand: '清除一整行',
-  stamp: '清除一整列',
-} as const;

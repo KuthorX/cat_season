@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import './styles.css';
+import { applyDocumentLocale } from './i18n';
 import { GameplayScene } from './scenes/GameplayScene';
 
 const config: Phaser.Types.Core.GameConfig = {
@@ -24,4 +25,5 @@ const config: Phaser.Types.Core.GameConfig = {
   scene: [GameplayScene],
 };
 
+applyDocumentLocale();
 new Phaser.Game(config);

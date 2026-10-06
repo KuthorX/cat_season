@@ -6,6 +6,8 @@ export type PowerUpKind = (typeof POWER_UP_KINDS)[number];
 export type Board = TileKind[][];
 export type GameMode = 'goals' | 'endless';
 export type PuzzleStatus = 'playing' | 'won' | 'lost';
+/** Notice ids are translated by the UI layer (see src/i18n). */
+export type PuzzleNotice = 'snackUsed' | 'autoShuffle';
 
 export type GridPoint = {
   x: number;
@@ -27,7 +29,7 @@ export type PuzzleState = {
   seed: number;
   score: number;
   status: PuzzleStatus;
-  lastNotice?: string;
+  lastNotice?: PuzzleNotice;
 };
 
 export type Match = {
@@ -218,7 +220,7 @@ export function usePowerUp(state: PuzzleState, kind: PowerUpKind, target?: GridP
         ...state,
         movesLeft: state.movesLeft + 5,
         inventory: spendInventory(state.inventory, kind),
-        lastNotice: '猫薄荷让猫咪又精神了一点，步数 +5。',
+        lastNotice: 'snackUsed',
       },
     };
   }
@@ -300,7 +302,7 @@ export function repairDeadBoard(state: PuzzleState): RepairResult {
         ...state.inventory,
         [reward]: state.inventory[reward] + 1,
       },
-      lastNotice: '没有可交换的一步，已自动打乱棋盘并赠送一个道具。',
+      lastNotice: 'autoShuffle',
     },
   };
 }

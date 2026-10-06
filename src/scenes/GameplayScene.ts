@@ -15,7 +15,9 @@ import {
   type TileDrop,
   type TileKind,
 } from '../systems/catPuzzle';
+import { onLocaleChange, t, toggleLocale } from '../i18n';
 import { HudController } from '../ui/hud';
+import { languageToggleHtml } from '../ui/languageToggle';
 
 const BOARD_SIZE = 7;
 const TILE_SIZE = 112;
@@ -54,6 +56,8 @@ export class GameplayScene extends Phaser.Scene {
   private music?: Phaser.Sound.BaseSound;
   private audioStarted = false;
   private menuRoot?: HTMLElement;
+  private menuLocaleButton?: HTMLButtonElement;
+  private unsubscribeMenuLocale?: () => void;
   private startButton?: HTMLButtonElement;
 
   constructor() {
@@ -199,20 +203,39 @@ export class GameplayScene extends Phaser.Scene {
     root.hidden = false;
     root.innerHTML = `
       <div class="menu-content">
-        <p class="menu-kicker">秋日猫咪消消乐</p>
-        <h1>猫咪季节</h1>
-        <p class="menu-copy">整理猫爪、小鱼和毛线，把窗边的小物一件件收好。</p>
-        <button class="menu-start" type="button">开始游戏</button>
+        ${languageToggleHtml('menu-lang-toggle')}
+        <p class="menu-kicker">${t('menu.kicker')}</p>
+        <h1>${t('menu.title')}</h1>
+        <p class="menu-copy">${t('menu.copy')}</p>
+        <button class="menu-start" type="button">${t('menu.start')}</button>
       </div>
     `;
 
     this.startButton = root.querySelector<HTMLButtonElement>('.menu-start') ?? undefined;
     this.startButton?.addEventListener('click', this.handleStartClick);
+    this.menuLocaleButton = root.querySelector<HTMLButtonElement>('[data-action="toggle-locale"]') ?? undefined;
+    this.menuLocaleButton?.addEventListener('click', toggleLocale);
+    this.unsubscribeMenuLocale ??= onLocaleChange(this.handleMenuLocaleChange);
   }
+
+  private handleMenuLocaleChange = (): void => {
+    if (!this.startButton) {
+      return;
+    }
+
+    this.startButton.removeEventListener('click', this.handleStartClick);
+    this.menuLocaleButton?.removeEventListener('click', toggleLocale);
+    this.showStartMenu();
+    this.menuRoot?.querySelector<HTMLButtonElement>('[data-action="toggle-locale"]')?.focus();
+  };
 
   private hideStartMenu(): void {
     this.startButton?.removeEventListener('click', this.handleStartClick);
     this.startButton = undefined;
+    this.menuLocaleButton?.removeEventListener('click', toggleLocale);
+    this.menuLocaleButton = undefined;
+    this.unsubscribeMenuLocale?.();
+    this.unsubscribeMenuLocale = undefined;
     if (this.menuRoot) {
       this.menuRoot.hidden = true;
       this.menuRoot.innerHTML = '';
