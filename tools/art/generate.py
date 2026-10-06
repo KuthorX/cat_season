@@ -593,7 +593,7 @@ def stitched_text() -> None:
             text = tables[locale][sid]
             grid = text_grid(text, scale)
             img = render_grid(grid, stitch_px, palette={"M": color}, seed=len(text), leg=0.4)
-            img.save(STITCHED_DIR / f"{sid}.{locale}.png", optimize=True)
+            img.save(STITCHED_DIR / f"{sid}.{locale}.webp", lossless=True, quality=100, method=6)
             # cols/rows let CSS size every stitched string to one shared stitch pitch
             manifest[sid][locale] = {"text": text, "cols": len(grid[0]), "rows": len(grid)}
     (STITCHED_DIR / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
@@ -681,23 +681,23 @@ def main() -> None:
     for i, (kind, grid) in enumerate(MOTIFS.items()):
         # tiles are painted at 2x game resolution: 16 px per stitch, 16x16 cell
         render_grid(grid, STITCH * 2, (CELL_STITCHES, CELL_STITCHES), seed=i + 1).save(
-            PUBLIC / f"tiles/tile-{kind}.png", optimize=True)
+            PUBLIC / f"tiles/tile-{kind}.webp", lossless=True, quality=100, method=6)
     board_texture().save(PUBLIC / "board/board.webp", quality=88, method=6)
     particle_x().save(PUBLIC / "fx/fx-stitch.png", optimize=True)
     particle_thread().save(PUBLIC / "fx/fx-thread.png", optimize=True)
 
     linen_texture().save(SRC_ASSETS / "art/linen.webp", quality=90, method=6)
     handkerchief().save(SRC_ASSETS / "art/handkerchief.webp", quality=90, method=6)
-    digit_sheet(PALETTE["k"]).save(SRC_ASSETS / "art/digits-ink.png", optimize=True)
-    digit_sheet("#a53f26").save(SRC_ASSETS / "art/digits-madder.png", optimize=True)
+    digit_sheet(PALETTE["k"]).save(SRC_ASSETS / "art/digits-ink.webp", lossless=True, quality=100, method=6)
+    digit_sheet("#a53f26").save(SRC_ASSETS / "art/digits-madder.webp", lossless=True, quality=100, method=6)
     # the menu cat is charted at double count (each square worked as 2x2 stitches)
     big_cat = ["".join(ch * 2 for ch in row) for row in CAT for _ in range(2)]
-    render_grid(big_cat, 12, seed=42).save(SRC_ASSETS / "art/menu-cat.png", optimize=True)
+    render_grid(big_cat, 12, seed=42).save(SRC_ASSETS / "art/menu-cat.webp", lossless=True, quality=100, method=6)
     aida_tile().save(SRC_ASSETS / "art/aida-tile.webp", quality=92, method=6)
-    sewing_button("#a53f26", "#f3dcc2").save(SRC_ASSETS / "art/sewing-button.png", optimize=True)
-    frame_piece().save(SRC_ASSETS / "art/frame-wood.png", optimize=True)
+    sewing_button("#a53f26", "#f3dcc2").save(SRC_ASSETS / "art/sewing-button.webp", lossless=True, quality=100, method=6)
+    frame_piece().save(SRC_ASSETS / "art/frame-wood.webp", lossless=True, quality=100, method=6)
     for name, grid in TOOLS.items():
-        render_grid(grid, 16, seed=len(name)).save(SRC_ASSETS / f"art/tool-{name}.png", optimize=True)
+        render_grid(grid, 16, seed=len(name)).save(SRC_ASSETS / f"art/tool-{name}.webp", lossless=True, quality=100, method=6)
     stitched_text()
     subset_font()
     print("art generated")

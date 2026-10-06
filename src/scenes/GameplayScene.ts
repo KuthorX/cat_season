@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { ASSET_KEYS, ASSET_PATHS, THREAD } from '../assets/manifest';
-import menuCat from '../assets/art/menu-cat.png';
-import sewingButton from '../assets/art/sewing-button.png';
+import menuCat from '../assets/art/menu-cat.webp';
+import sewingButton from '../assets/art/sewing-button.webp';
 import { parseShotMode } from '../debug/shotMode';
 import {
   TILE_KINDS,
@@ -24,6 +24,8 @@ import { HudController } from '../ui/hud';
 import { languageToggleHtml } from '../ui/languageToggle';
 import { stitchedTextHtml } from '../ui/stitchedText';
 import { BOARD_ORIGIN, BOARD_PIXELS, BOARD_SIZE, CELL_SIZE, GAME_SIZE, STITCH, cellToWorld, worldToCell } from './boardLayout';
+
+const MENU_FONT = '24px "Fusion Pixel"';
 
 type TileView = {
   container: Phaser.GameObjects.Container;
@@ -63,13 +65,15 @@ export class GameplayScene extends Phaser.Scene {
   }
 
   preload(): void {
+    const reportProgress = (fraction: number): void => window.CatBoot?.report('assets', fraction);
+    this.load.on(Phaser.Loader.Events.PROGRESS, reportProgress);
+    this.load.once(Phaser.Loader.Events.COMPLETE, () => this.load.off(Phaser.Loader.Events.PROGRESS, reportProgress));
     this.load.image(ASSET_KEYS.board, ASSET_PATHS.board);
     for (const kind of TILE_KINDS) {
       this.load.image(ASSET_KEYS.tile[kind], ASSET_PATHS.tile[kind]);
     }
     this.load.image(ASSET_KEYS.fx.stitch, ASSET_PATHS.fx.stitch);
     this.load.image(ASSET_KEYS.fx.thread, ASSET_PATHS.fx.thread);
-    this.load.audio(ASSET_KEYS.audio.music, ASSET_PATHS.audio.music);
     this.load.audio(ASSET_KEYS.audio.click, ASSET_PATHS.audio.click);
     this.load.audio(ASSET_KEYS.audio.invalid, ASSET_PATHS.audio.invalid);
     this.load.audio(ASSET_KEYS.audio.match, ASSET_PATHS.audio.match);
@@ -83,9 +87,30 @@ export class GameplayScene extends Phaser.Scene {
     this.setupAudio();
     this.showStartMenu();
     this.applyShotMode();
+    void this.revealMenu();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.cleanupGameState({ destroyHud: true, removeDocumentListeners: true }));
     this.events.once(Phaser.Scenes.Events.DESTROY, () => this.cleanupGameState({ destroyHud: true, removeDocumentListeners: true }));
     document.addEventListener('visibilitychange', this.handleVisibilityChange);
+  }
+
+  /** Hold the boot loader until the menu's font and art are ready, then fetch the music in the background. */
+  private async revealMenu(): Promise<void> {
+    const pending: Promise<unknown>[] = [
+      document.fonts.load(MENU_FONT),
+      ...Array.from(this.menuRoot?.querySelectorAll('img') ?? [], (img) => img.decode()),
+    ];
+    let settled = 0;
+    window.CatBoot?.report('ready', 0);
+    await Promise.allSettled(
+      pending.map((task) =>
+        task.finally(() => {
+          settled += 1;
+          window.CatBoot?.report('ready', settled / pending.length);
+        }),
+      ),
+    );
+    window.CatBoot?.finish();
+    this.loadMusic();
   }
 
   private applyShotMode(): void {
@@ -273,11 +298,6 @@ export class GameplayScene extends Phaser.Scene {
   };
 
   private setupAudio(): void {
-    this.music = this.sound.add(ASSET_KEYS.audio.music, {
-      loop: true,
-      volume: 0.18,
-    });
-
     if (!this.sound.locked) {
       this.ensureAudioStarted();
       return;
@@ -287,12 +307,43 @@ export class GameplayScene extends Phaser.Scene {
   }
 
   private ensureAudioStarted = (): void => {
-    if (this.audioStarted || !this.music) {
+    if (this.audioStarted) {
       return;
     }
 
-    this.audioStarted = this.music.isPlaying || this.music.play();
+    this.audioStarted = true;
+    this.startMusic();
   };
+
+  /** The music is the biggest download, so it never blocks startup; it joins in once it lands. */
+  private loadMusic(): void {
+    if (this.cache.audio.exists(ASSET_KEYS.audio.music)) {
+      this.attachMusic();
+      return;
+    }
+
+    this.load.audio(ASSET_KEYS.audio.music, [{ type: 'opus', url: ASSET_PATHS.audio.music }]);
+    this.load.once(Phaser.Loader.Events.COMPLETE, this.attachMusic);
+    this.load.start();
+  }
+
+  private attachMusic = (): void => {
+    if (this.music || !this.sys.isActive() || !this.cache.audio.exists(ASSET_KEYS.audio.music)) {
+      return;
+    }
+
+    this.music = this.sound.add(ASSET_KEYS.audio.music, {
+      loop: true,
+      volume: 0.18,
+    });
+    this.startMusic();
+  };
+
+  private startMusic(): void {
+    if (this.audioStarted && this.music && !this.music.isPlaying) {
+      this.music.play();
+    }
+  }
 
   private playSound(key: string, config?: Phaser.Types.Sound.SoundConfig): void {
     if (!this.audioStarted || this.sound.mute) {

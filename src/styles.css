@@ -145,11 +145,11 @@ img {
 }
 
 .sn-ink {
-  --sn-sheet: url("./assets/art/digits-ink.png");
+  --sn-sheet: url("./assets/art/digits-ink.webp");
 }
 
 .sn-madder {
-  --sn-sheet: url("./assets/art/digits-madder.png");
+  --sn-sheet: url("./assets/art/digits-madder.webp");
 }
 
 .stitched-text,
@@ -301,7 +301,7 @@ img {
   height: var(--stage);
   padding: calc(var(--st) * 2) calc(var(--st) * 4);
   border: calc(var(--st) * 2.75) solid transparent;
-  border-image: url("./assets/art/frame-wood.png") 22 / calc(var(--st) * 2.75) round;
+  border-image: url("./assets/art/frame-wood.webp") 22 / calc(var(--st) * 2.75) round;
   background: var(--aida) url("./assets/art/aida-tile.webp") repeat;
   background-size: calc(var(--st) * 8) calc(var(--st) * 8);
   background-origin: padding-box;

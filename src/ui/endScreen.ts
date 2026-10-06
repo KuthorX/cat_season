@@ -2,7 +2,7 @@ import { formatNumber, onLocaleChange, t } from '../i18n';
 import type { PuzzleState } from '../systems/catPuzzle';
 import { stitchedNumberHtml } from './stitchedNumber';
 import { stitchedTextHtml } from './stitchedText';
-import sewingButton from '../assets/art/sewing-button.png';
+import sewingButton from '../assets/art/sewing-button.webp';
 
 /** Out-of-moves card stitched over the board, with the final tally and a replay button. */
 export class EndScreen {

@@ -30,14 +30,14 @@ export const ASSET_KEYS = {
 export const ASSET_PATHS = {
   board: 'assets/board/board.webp',
   tile: {
-    paw: 'assets/tiles/tile-paw.png',
-    fish: 'assets/tiles/tile-fish.png',
-    yarn: 'assets/tiles/tile-yarn.png',
-    bell: 'assets/tiles/tile-bell.png',
-    milk: 'assets/tiles/tile-milk.png',
-    cushion: 'assets/tiles/tile-cushion.png',
-    tuna: 'assets/tiles/tile-tuna.png',
-    star: 'assets/tiles/tile-star.png',
+    paw: 'assets/tiles/tile-paw.webp',
+    fish: 'assets/tiles/tile-fish.webp',
+    yarn: 'assets/tiles/tile-yarn.webp',
+    bell: 'assets/tiles/tile-bell.webp',
+    milk: 'assets/tiles/tile-milk.webp',
+    cushion: 'assets/tiles/tile-cushion.webp',
+    tuna: 'assets/tiles/tile-tuna.webp',
+    star: 'assets/tiles/tile-star.webp',
   } satisfies Record<TileKind, string>,
   fx: {
     stitch: 'assets/fx/fx-stitch.png',

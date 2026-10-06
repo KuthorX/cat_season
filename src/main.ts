@@ -27,6 +27,7 @@ const config: Phaser.Types.Core.GameConfig = {
   scene: [GameplayScene],
 };
 
+window.CatBoot?.report('scripts', 1);
 applyDocumentLocale();
 let game: Phaser.Game | undefined;
 const stage = document.getElementById('app');

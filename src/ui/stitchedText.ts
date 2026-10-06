@@ -10,14 +10,14 @@ export type StitchedEntry = { text: string; cols: number; rows: number };
 /** What the generator stitched: the source text and the image size in stitches. */
 export const STITCHED_MANIFEST = manifest as Record<StitchedId, Record<Locale, StitchedEntry>>;
 
-const FILES = import.meta.glob<string>('../assets/art/stitched/*.png', {
+const FILES = import.meta.glob<string>('../assets/art/stitched/*.webp', {
   eager: true,
   query: '?url',
   import: 'default',
 });
 
 export function stitchedTextUrl(id: StitchedId, locale: Locale = getLocale()): string {
-  const url = FILES[`../assets/art/stitched/${id}.${locale}.png`];
+  const url = FILES[`../assets/art/stitched/${id}.${locale}.webp`];
   if (!url) {
     throw new Error(`Missing stitched text "${id}" for ${locale}; run tools/art/generate.py`);
   }

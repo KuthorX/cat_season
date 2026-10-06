@@ -4,8 +4,53 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>猫咪季节</title>
+    <style>
+      /* Critical CSS for the boot loader: paints before any chunk or image arrives. */
+      html { background: #d8c8a6; }
+      #boot-loader {
+        position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center;
+        background:
+          repeating-linear-gradient(0deg, rgba(120, 92, 58, 0.07) 0 1px, transparent 1px 4px),
+          repeating-linear-gradient(90deg, rgba(120, 92, 58, 0.07) 0 1px, transparent 1px 4px),
+          #d8c8a6;
+        transition: opacity 0.4s ease;
+      }
+      #boot-loader.is-done { opacity: 0; pointer-events: none; }
+      .boot-card {
+        --st: clamp(10px, 2.6vmin, 18px);
+        display: grid; justify-items: center; gap: calc(var(--st) * 0.9);
+        padding: calc(var(--st) * 1.6) calc(var(--st) * 2);
+        background:
+          radial-gradient(circle at 50% 50%, rgba(91, 70, 46, 0.18) 0 18%, transparent 20%) 0 0 / var(--st) var(--st),
+          #efe6d2;
+        outline: 2px dashed #a53f26; outline-offset: calc(var(--st) * -0.55);
+        box-shadow: 0 6px 18px rgba(51, 36, 26, 0.18);
+        color: #33241a; font: 600 clamp(14px, 3vmin, 20px) / 1.2 ui-rounded, system-ui, sans-serif;
+      }
+      .boot-row { display: flex; }
+      .boot-x {
+        width: var(--st); height: var(--st);
+        --c: rgba(51, 36, 26, 0.16);
+        background:
+          linear-gradient(45deg, transparent 40%, var(--c) 40% 60%, transparent 60%),
+          linear-gradient(-45deg, transparent 40%, var(--c) 40% 60%, transparent 60%);
+        transition: transform 0.2s ease;
+      }
+      .boot-x.on { --c: #a53f26; transform: scale(1.08); }
+      .boot-x.on:nth-child(3n + 2) { --c: #c99a2a; }
+      .boot-x.on:nth-child(3n) { --c: #2f5a4a; }
+      .boot-meta { display: flex; gap: 0.8em; align-items: baseline; }
+      .boot-pct { font-variant-numeric: tabular-nums; color: #a53f26; min-width: 3.2em; text-align: right; }
+      @media (prefers-reduced-motion: reduce) { #boot-loader, .boot-x { transition: none; } }
+    </style>
   </head>
   <body>
+    <div id="boot-loader" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div class="boot-card">
+        <div class="boot-row" aria-hidden="true"></div>
+        <div class="boot-meta"><span class="boot-label"></span><span class="boot-pct">0%</span></div>
+      </div>
+    </div>
     <div id="app">
       <main class="game-shell" aria-label="猫咪季节益智游戏">
         <section class="stage-panel">

@@ -1,9 +1,9 @@
 import { ASSET_PATHS } from '../assets/manifest';
-import toolHint from '../assets/art/tool-hint.png';
-import toolRestart from '../assets/art/tool-restart.png';
-import toolSnack from '../assets/art/tool-snack.png';
-import toolStamp from '../assets/art/tool-stamp.png';
-import toolWand from '../assets/art/tool-wand.png';
+import toolHint from '../assets/art/tool-hint.webp';
+import toolRestart from '../assets/art/tool-restart.webp';
+import toolSnack from '../assets/art/tool-snack.webp';
+import toolStamp from '../assets/art/tool-stamp.webp';
+import toolWand from '../assets/art/tool-wand.webp';
 import { formatNumber, onLocaleChange, t, toggleLocale } from '../i18n';
 import { POWER_UP_KINDS, type PowerUpKind, type PuzzleState, type TileKind } from '../systems/catPuzzle';
 import { languageToggleHtml } from './languageToggle';
