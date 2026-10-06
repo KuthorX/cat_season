@@ -12,12 +12,6 @@
   --pencil: #3d3128;
   --pencil-soft: #7a6a58;
   --madder: #a53f26;
-  --pad: clamp(12px, 2.6vh, 28px);
-  --gap: clamp(20px, 4vw, 64px);
-  /* the board's side, and one of its stitches on screen; HUD art is sized in the same stitches */
-  /* the key is 0.72 of the board's width, so everything scales together */
-  --stage: min(100dvh - var(--pad) * 2, (100vw - var(--pad) * 2 - var(--gap)) / 1.72);
-  --st: calc(var(--stage) * 8 / 960);
   font-family: "Fusion Pixel", ui-monospace, monospace;
   font-size: 12px;
   color: var(--pencil);
@@ -31,9 +25,13 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  height: 100%;
+}
+
 body {
   margin: 0;
-  min-width: 320px;
   overflow: hidden;
 }
 
@@ -55,12 +53,30 @@ img {
   -webkit-user-drag: none;
 }
 
-/* ---------- layout: framed board left, pattern key right ---------- */
+/* ---------- layout: a fixed 1280x720 stage, scaled whole to the viewport ---------- */
 
+/* src/ui/fitStage.ts sets --fit and data-layout; the linen behind it is the letterbox. */
 #app {
-  height: 100vh;
-  height: 100dvh;
+  --pad: 18px;
+  --gap: 52px;
+  /* the board's side, and one of its stitches; HUD art is sized in the same stitches */
+  --stage: 684px;
+  --st: calc(var(--stage) * 8 / 960);
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 1280px;
+  height: 720px;
   padding: var(--pad);
+  transform: translate(-50%, -50%) scale(var(--fit, 1));
+  transform-origin: center;
+}
+
+/* phones held upright: board on top, key below, same stitch pitch */
+#app[data-layout="portrait"] {
+  --gap: 24px;
+  width: 720px;
+  height: 1440px;
 }
 
 .game-shell {
@@ -69,6 +85,16 @@ img {
   grid-template-columns: var(--stage) calc(var(--stage) * 0.72);
   justify-content: center;
   gap: var(--gap);
+}
+
+#app[data-layout="portrait"] .game-shell {
+  grid-template-columns: var(--stage);
+  grid-template-rows: var(--stage) minmax(0, 1fr);
+}
+
+/* the menu covers the stage; the board keeps its layout underneath so Phaser never re-measures */
+#app:has(.start-menu:not([hidden])) .game-shell {
+  visibility: hidden;
 }
 
 .stage-panel {
@@ -82,8 +108,11 @@ img {
   inset: 0;
 }
 
+/* Phaser renders at 960x960 (Scale.NONE); the canvas fills the board box and scales with the stage. */
 #game-root canvas {
   display: block;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 /* ---------- stitched pieces ---------- */
@@ -213,13 +242,12 @@ img {
 /* ---------- start menu ---------- */
 
 .start-menu {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 5;
-  padding: clamp(20px, 5vh, 56px) clamp(24px, 6vw, 96px);
+  padding: 36px 76px;
   display: grid;
   place-items: center;
-  background: var(--linen) url("./assets/art/linen.webp") center / cover no-repeat;
   overflow: hidden;
 }
 
@@ -231,13 +259,13 @@ img {
 
 .menu-lang-toggle {
   top: auto;
-  bottom: clamp(12px, 3vh, 28px);
-  right: clamp(16px, 3vw, 40px);
+  bottom: 22px;
+  right: 38px;
 }
 
 .menu-content {
   /* one stitch pitch for the cat and the title so they read as one piece of work */
-  --text-st: min(0.8vh, 0.56vw);
+  --text-st: 5.76px;
   display: grid;
   justify-items: center;
   text-align: center;
@@ -253,7 +281,7 @@ img {
 
 .menu-copy {
   max-width: 34em;
-  margin-top: clamp(16px, 3.6vh, 32px);
+  margin-top: 26px;
   color: var(--pencil);
   font-size: 24px;
   line-height: 1.5;
@@ -261,7 +289,7 @@ img {
 
 .menu-start {
   --text-st: 3px;
-  margin-top: clamp(16px, 3.6vh, 36px);
+  margin-top: 26px;
 }
 
 /* ---------- HUD: the pattern key, worked straight onto the linen ---------- */
@@ -511,44 +539,23 @@ img {
   font-size: calc(var(--st) * 9);
 }
 
-/* ---------- narrow screens: board on top, key below, page scrolls ---------- */
+/* ---------- portrait stage: the key runs full width under the board ---------- */
 
-@media (max-width: 860px), (max-aspect-ratio: 3/2) {
-  /* board still fits the viewport; the key follows below and the page scrolls */
-  :root {
-    --stage: min(100vw - var(--pad) * 2, 100dvh - var(--pad) * 2);
-  }
+#app[data-layout="portrait"] .hud-panel {
+  height: auto;
+}
 
-  body {
-    overflow: auto;
-  }
+#app[data-layout="portrait"] .powerup-list {
+  flex-wrap: wrap;
+}
 
-  #app {
-    height: auto;
-    min-height: 100vh;
-  }
+/* the English title is 122 stitches wide; a finer pitch keeps it inside the narrow stage */
+#app[data-layout="portrait"] .start-menu {
+  padding: 36px 24px;
+}
 
-  .game-shell {
-    height: auto;
-    grid-template-columns: minmax(0, min(100%, 640px));
-    justify-items: center;
-  }
-
-  /* the key keeps a readable stitch pitch even when the board shrinks to phone width */
-  .hud-panel {
-    --st: 5.6px;
-    width: 100%;
-    height: auto;
-    gap: 24px;
-  }
-
-  .hud-stat.is-score {
-    min-width: 0;
-  }
-
-  .powerup-list {
-    flex-wrap: wrap;
-  }
+#app[data-layout="portrait"] .menu-content {
+  --text-st: 4.6px;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -3,6 +3,7 @@ import './styles.css';
 import { applyDocumentLocale } from './i18n';
 import { GAME_SIZE } from './scenes/boardLayout';
 import { GameplayScene } from './scenes/GameplayScene';
+import { mountStageFit } from './ui/fitStage';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -10,9 +11,9 @@ const config: Phaser.Types.Core.GameConfig = {
   width: GAME_SIZE,
   height: GAME_SIZE,
   transparent: true,
+  // The stage CSS scales the canvas with everything else; Phaser reads the scaled bounds for input.
   scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
+    mode: Phaser.Scale.NONE,
   },
   input: {
     activePointers: 3,
@@ -27,4 +28,9 @@ const config: Phaser.Types.Core.GameConfig = {
 };
 
 applyDocumentLocale();
-new Phaser.Game(config);
+let game: Phaser.Game | undefined;
+const stage = document.getElementById('app');
+if (stage) {
+  mountStageFit(stage, () => game?.scale.refresh());
+}
+game = new Phaser.Game(config);
