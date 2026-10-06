@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="cat bell tile">
-  <rect width="96" height="96" rx="18" fill="#fff8e8"/>
-  <path d="M31 44c0-14 9-24 17-24s17 10 17 24l7 21H24l7-21Z" fill="#d9a636"/>
-  <path d="M30 64h36" stroke="#89621e" stroke-width="6" stroke-linecap="round"/>
-  <circle cx="48" cy="72" r="7" fill="#89621e"/>
-  <path d="M40 20c0-5 16-5 16 0" stroke="#89621e" stroke-width="5" stroke-linecap="round"/>
-</svg>

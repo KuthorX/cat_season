@@ -180,6 +180,7 @@ export function applyMove(state: PuzzleState, from: GridPoint, to: GridPoint): M
     seed: random.seed,
     score: state.score + clearedTiles * 60 + Math.max(0, cascades - 1) * 120,
     status: 'playing',
+    lastNotice: undefined,
   });
   const repaired = repairDeadBoard(nextState);
 
@@ -258,6 +259,7 @@ export function usePowerUp(state: PuzzleState, kind: PowerUpKind, target?: GridP
     inventory: spendInventory(state.inventory, kind),
     seed: random.seed,
     score: state.score + clearedTiles * 50,
+    lastNotice: undefined,
   });
   const repaired = repairDeadBoard(nextState);
 

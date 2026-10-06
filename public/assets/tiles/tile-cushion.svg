@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="cat cushion tile">
-  <rect width="96" height="96" rx="18" fill="#fff8e8"/>
-  <path d="M23 43c0-14 10-23 25-23s25 9 25 23v18c0 9-7 15-16 15H39c-9 0-16-6-16-15V43Z" fill="#7fb8a4"/>
-  <path d="M34 22 26 11M62 22l8-11" stroke="#7fb8a4" stroke-width="8" stroke-linecap="round"/>
-  <path d="M32 52c8 5 24 5 32 0" fill="none" stroke="#fff8e8" stroke-width="6" stroke-linecap="round"/>
-  <circle cx="39" cy="43" r="4" fill="#173037"/>
-  <circle cx="57" cy="43" r="4" fill="#173037"/>
-</svg>

@@ -148,6 +148,31 @@ describe('cat puzzle rules', () => {
     expect(result.state.inventory.snack).toBe(0);
   });
 
+  it('clears a stale notice once the next move is played', () => {
+    const state = createPuzzle({
+      seed: 11,
+      width: 4,
+      height: 4,
+      moves: 6,
+      mode: 'endless',
+      goals: { fish: 30 },
+      inventory: { snack: 1 },
+      board: [
+        ['paw', 'fish', 'paw', 'bell'],
+        ['yarn', 'paw', 'milk', 'fish'],
+        ['bell', 'milk', 'yarn', 'milk'],
+        ['fish', 'yarn', 'bell', 'paw'],
+      ],
+    });
+
+    const snacked = usePowerUp(state, 'snack').state;
+    expect(snacked.lastNotice).toBe('snackUsed');
+
+    const moved = applyMove(snacked, p(1, 0), p(1, 1));
+    expect(moved.accepted).toBe(true);
+    expect(moved.state.lastNotice).not.toBe('snackUsed');
+  });
+
   it('uses a teaser wand power-up to clear one row and reduce goals', () => {
     const state = createPuzzle({
       seed: 19,
