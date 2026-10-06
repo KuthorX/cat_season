@@ -8,15 +8,12 @@ const zh = {
   'doc.menuLabel': '开始菜单',
   'doc.hudLabel': '游戏状态',
 
-  'menu.kicker': '秋日猫咪消消乐',
   'menu.title': '猫咪季节',
   'menu.copy': '整理猫爪、小鱼和毛线，把窗边的小物一件件收好。',
   'menu.start': '开始游戏',
 
   'lang.toggleLabel': '切换语言',
-  'lang.current': '中文',
 
-  'hud.title': '猫咪季节',
   'hud.moves': '步数',
   'hud.score': '分数',
   'hud.round': '轮次',
@@ -25,10 +22,14 @@ const zh = {
   'hud.restart': '重新开始',
   'hud.hint': '提示一步',
 
+  'end.lostTitle': '猫咪睡着了',
+  'end.wonTitle': '全部收好了',
+  'end.score': '最终分数',
+  'end.round': '到达轮次',
+  'end.again': '再来一局',
+
   'result.won': '本局猫咪小物已经全部收好了。',
   'result.lost': '步数用完了，猫咪已经开始午睡。',
-  'result.hasMove': '棋盘上还有可以交换的一步。',
-  'result.noMove': '没有可交换的一步，系统会自动整理棋盘。',
 
   'notice.snackUsed': '猫薄荷让猫咪又精神了一点，步数 +5。',
   'notice.autoShuffle': '没有可交换的一步，已自动打乱棋盘并赠送一个道具。',
@@ -59,15 +60,12 @@ const en: Record<StringId, string> = {
   'doc.menuLabel': 'Start menu',
   'doc.hudLabel': 'Game status',
 
-  'menu.kicker': 'A cozy autumn cat match-3',
   'menu.title': 'Cat Season',
   'menu.copy': 'Sort the paws, fish and yarn, and tuck every little treasure back by the window.',
   'menu.start': 'Play',
 
   'lang.toggleLabel': 'Switch language',
-  'lang.current': 'EN',
 
-  'hud.title': 'Cat Season',
   'hud.moves': 'Moves',
   'hud.score': 'Score',
   'hud.round': 'Round',
@@ -76,10 +74,14 @@ const en: Record<StringId, string> = {
   'hud.restart': 'Restart',
   'hud.hint': 'Show a hint',
 
+  'end.lostTitle': 'Nap time',
+  'end.wonTitle': 'All tucked away',
+  'end.score': 'Final score',
+  'end.round': 'Round reached',
+  'end.again': 'Play again',
+
   'result.won': 'All the cat treasures are tucked away!',
   'result.lost': 'Out of moves. The cats have curled up for a nap.',
-  'result.hasMove': 'There is still a swap to make on the board.',
-  'result.noMove': 'No swaps left. The board will tidy itself up.',
 
   'notice.snackUsed': 'Catnip perks the cats right up: +5 moves.',
   'notice.autoShuffle': 'No swaps left, so the board was reshuffled. Have a free item!',

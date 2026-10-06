@@ -37,9 +37,7 @@ describe('i18n dictionaries', () => {
   it('has no empty strings and no CJK text in English', () => {
     for (const [id, value] of Object.entries(STRINGS.en)) {
       expect(value.trim(), id).not.toBe('');
-      if (id !== 'lang.current') {
-        expect(value, id).not.toMatch(/[　-〿一-鿿＀-￯]/);
-      }
+      expect(value, id).not.toMatch(/[　-〿一-鿿＀-￯]/);
     }
     for (const [id, value] of Object.entries(STRINGS.zh)) {
       expect(value.trim(), id).not.toBe('');

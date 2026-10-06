@@ -1,0 +1,62 @@
+{
+  "menu.title": {
+    "zh": {
+      "text": "猫咪季节",
+      "cols": 96,
+      "rows": 22
+    },
+    "en": {
+      "text": "Cat Season",
+      "cols": 122,
+      "rows": 18
+    }
+  },
+  "menu.start": {
+    "zh": {
+      "text": "开始游戏",
+      "cols": 48,
+      "rows": 11
+    },
+    "en": {
+      "text": "Play",
+      "cols": 23,
+      "rows": 11
+    }
+  },
+  "end.lostTitle": {
+    "zh": {
+      "text": "猫咪睡着了",
+      "cols": 60,
+      "rows": 11
+    },
+    "en": {
+      "text": "Nap time",
+      "cols": 48,
+      "rows": 11
+    }
+  },
+  "end.wonTitle": {
+    "zh": {
+      "text": "全部收好了",
+      "cols": 60,
+      "rows": 11
+    },
+    "en": {
+      "text": "All tucked away",
+      "cols": 88,
+      "rows": 11
+    }
+  },
+  "end.again": {
+    "zh": {
+      "text": "再来一局",
+      "cols": 48,
+      "rows": 11
+    },
+    "en": {
+      "text": "Play again",
+      "cols": 57,
+      "rows": 11
+    }
+  }
+}

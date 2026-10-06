@@ -1,7 +1,7 @@
 import type { TileKind } from '../systems/catPuzzle';
 
 export const ASSET_KEYS = {
-  background: 'cat-season-bg',
+  board: 'cat-season-board',
   tile: {
     paw: 'tile-paw',
     fish: 'tile-fish',
@@ -13,8 +13,8 @@ export const ASSET_KEYS = {
     star: 'tile-star',
   } satisfies Record<TileKind, string>,
   fx: {
-    pawParticle: 'fx-paw-particle',
-    sparkleParticle: 'fx-sparkle-particle',
+    stitch: 'fx-stitch',
+    thread: 'fx-thread',
   },
   audio: {
     music: 'audio-cozy-puzzle-ingame',
@@ -26,21 +26,22 @@ export const ASSET_KEYS = {
   },
 };
 
+/** Paths stay relative so the build works from any folder (itch.io serves games from a subpath). */
 export const ASSET_PATHS = {
-  background: 'assets/environment/cat-season-bg.png',
+  board: 'assets/board/board.webp',
   tile: {
-    paw: 'assets/tiles/tile-paw.svg',
-    fish: 'assets/tiles/tile-fish.svg',
-    yarn: 'assets/tiles/tile-yarn.svg',
-    bell: 'assets/tiles/tile-bell.svg',
-    milk: 'assets/tiles/tile-milk.svg',
-    cushion: 'assets/tiles/tile-cushion.svg',
-    tuna: 'assets/tiles/tile-tuna.svg',
-    star: 'assets/tiles/tile-star.svg',
+    paw: 'assets/tiles/tile-paw.png',
+    fish: 'assets/tiles/tile-fish.png',
+    yarn: 'assets/tiles/tile-yarn.png',
+    bell: 'assets/tiles/tile-bell.png',
+    milk: 'assets/tiles/tile-milk.png',
+    cushion: 'assets/tiles/tile-cushion.png',
+    tuna: 'assets/tiles/tile-tuna.png',
+    star: 'assets/tiles/tile-star.png',
   } satisfies Record<TileKind, string>,
   fx: {
-    pawParticle: 'assets/fx/fx-paw-particle.svg',
-    sparkleParticle: 'assets/fx/fx-sparkle-particle.svg',
+    stitch: 'assets/fx/fx-stitch.png',
+    thread: 'assets/fx/fx-thread.png',
   },
   audio: {
     music: 'assets/audio/cozy-puzzle-ingame.ogg',
@@ -50,4 +51,22 @@ export const ASSET_PATHS = {
     shuffle: 'assets/audio/shuffle.ogg',
     hover: 'assets/audio/tile-hover.ogg',
   },
+};
+
+/** Thread colours, matching the main colour of each motif in tools/art/generate.py. */
+export const THREAD = {
+  tile: {
+    paw: 0xc65a30,
+    fish: 0x3f739c,
+    yarn: 0xd27b93,
+    bell: 0xd9a93c,
+    milk: 0x2f6b5a,
+    cushion: 0x8fb07f,
+    tuna: 0x7d4f86,
+    star: 0x2e8f8a,
+  } satisfies Record<TileKind, number>,
+  madder: 0xa53f26,
+  straw: 0xc99a2a,
+  spruce: 0x2f5a4a,
+  ink: 0x33241a,
 };

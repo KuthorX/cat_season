@@ -1,13 +1,14 @@
 import Phaser from 'phaser';
 import './styles.css';
 import { applyDocumentLocale } from './i18n';
+import { GAME_SIZE } from './scenes/boardLayout';
 import { GameplayScene } from './scenes/GameplayScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   parent: 'game-root',
-  width: 1440,
-  height: 960,
+  width: GAME_SIZE,
+  height: GAME_SIZE,
   transparent: true,
   scale: {
     mode: Phaser.Scale.FIT,

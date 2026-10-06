@@ -1,5 +1,8 @@
 import Phaser from 'phaser';
-import { ASSET_KEYS, ASSET_PATHS } from '../assets/manifest';
+import { ASSET_KEYS, ASSET_PATHS, THREAD } from '../assets/manifest';
+import menuCat from '../assets/art/menu-cat.png';
+import sewingButton from '../assets/art/sewing-button.png';
+import { parseShotMode } from '../debug/shotMode';
 import {
   TILE_KINDS,
   applyMove,
@@ -16,23 +19,16 @@ import {
   type TileKind,
 } from '../systems/catPuzzle';
 import { onLocaleChange, t, toggleLocale } from '../i18n';
+import { EndScreen } from '../ui/endScreen';
 import { HudController } from '../ui/hud';
 import { languageToggleHtml } from '../ui/languageToggle';
-
-const BOARD_SIZE = 7;
-const TILE_SIZE = 112;
-const TILE_GAP = 12;
-const BOARD_PADDING = 28;
-const BOARD_X = 292;
-const BOARD_Y = 56;
-const TILE_TEXTURE_SIZE = 256;
-const TILE_ICON_SIZE = 78;
+import { stitchedTextHtml } from '../ui/stitchedText';
+import { BOARD_ORIGIN, BOARD_PIXELS, BOARD_SIZE, CELL_SIZE, GAME_SIZE, STITCH, cellToWorld, worldToCell } from './boardLayout';
 
 type TileView = {
   container: Phaser.GameObjects.Container;
   content: Phaser.GameObjects.Container;
-  shadow: Phaser.GameObjects.Ellipse;
-  bg: Phaser.GameObjects.Rectangle;
+  outline: Phaser.GameObjects.Graphics;
   sprite: Phaser.GameObjects.Image;
   kind: TileKind;
   scaleTween?: Phaser.Tweens.Tween;
@@ -42,11 +38,13 @@ type TileView = {
 export class GameplayScene extends Phaser.Scene {
   private state!: PuzzleState;
   private hud?: HudController;
+  private endScreen?: EndScreen;
   private selected?: GridPoint;
   private tileViews = new Map<string, TileView>();
   private activeTimers: Phaser.Time.TimerEvent[] = [];
   private hintGraphics?: Phaser.GameObjects.Graphics;
-  private boardFrame?: Phaser.GameObjects.Container;
+  private boardFrame?: Phaser.GameObjects.Image;
+  private targetGraphics?: Phaser.GameObjects.Graphics;
   private boardLayer?: Phaser.GameObjects.Container;
   private boardInputZone?: Phaser.GameObjects.Zone;
   private pendingPowerUp?: PowerUpKind;
@@ -65,12 +63,12 @@ export class GameplayScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.load.image(ASSET_KEYS.background, ASSET_PATHS.background);
+    this.load.image(ASSET_KEYS.board, ASSET_PATHS.board);
     for (const kind of TILE_KINDS) {
-      this.load.svg(ASSET_KEYS.tile[kind], ASSET_PATHS.tile[kind], { width: TILE_TEXTURE_SIZE, height: TILE_TEXTURE_SIZE });
+      this.load.image(ASSET_KEYS.tile[kind], ASSET_PATHS.tile[kind]);
     }
-    this.load.svg(ASSET_KEYS.fx.pawParticle, ASSET_PATHS.fx.pawParticle, { width: 96, height: 96 });
-    this.load.svg(ASSET_KEYS.fx.sparkleParticle, ASSET_PATHS.fx.sparkleParticle, { width: 96, height: 96 });
+    this.load.image(ASSET_KEYS.fx.stitch, ASSET_PATHS.fx.stitch);
+    this.load.image(ASSET_KEYS.fx.thread, ASSET_PATHS.fx.thread);
     this.load.audio(ASSET_KEYS.audio.music, ASSET_PATHS.audio.music);
     this.load.audio(ASSET_KEYS.audio.click, ASSET_PATHS.audio.click);
     this.load.audio(ASSET_KEYS.audio.invalid, ASSET_PATHS.audio.invalid);
@@ -84,13 +82,28 @@ export class GameplayScene extends Phaser.Scene {
     this.createHud();
     this.setupAudio();
     this.showStartMenu();
+    this.applyShotMode();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.cleanupGameState({ destroyHud: true, removeDocumentListeners: true }));
     this.events.once(Phaser.Scenes.Events.DESTROY, () => this.cleanupGameState({ destroyHud: true, removeDocumentListeners: true }));
     document.addEventListener('visibilitychange', this.handleVisibilityChange);
   }
 
+  private applyShotMode(): void {
+    const mode = parseShotMode(globalThis.location?.search ?? '');
+    if (!mode) {
+      return;
+    }
+
+    this.startNewPuzzle();
+    if (mode === 'end') {
+      this.state = { ...this.state, movesLeft: 0, status: 'lost', score: 4860, round: 3 };
+      this.updateHud();
+    }
+  }
+
   private startNewPuzzle = (): void => {
     this.hideStartMenu();
+    this.endScreen?.hide();
     this.cleanupGameState({ keepHud: true });
     this.state = this.createRandomPuzzle();
     this.lastBoardSignature = this.boardSignature(this.state.board);
@@ -161,20 +174,8 @@ export class GameplayScene extends Phaser.Scene {
   }
 
   private createBoardFrame(): void {
-    this.boardFrame?.destroy(true);
-    const width = BOARD_SIZE * TILE_SIZE + (BOARD_SIZE - 1) * TILE_GAP + BOARD_PADDING * 2;
-    const height = width;
-    const x = BOARD_X + width / 2 - BOARD_PADDING;
-    const y = BOARD_Y + height / 2 - BOARD_PADDING;
-
-    this.boardFrame = this.add.container(0, 0).setDepth(1);
-    const shadow = this.add.rectangle(x + 14, y + 18, width, height, 0x102229, 0.34);
-    const panel = this.add.rectangle(x, y, width, height, 0xfff4df, 0.82);
-    const inner = this.add.rectangle(x, y, width - 18, height - 18, 0xfffbf1, 0.28);
-    panel.setStrokeStyle(5, 0xfff0c7, 0.78);
-    inner.setStrokeStyle(2, 0x2d7777, 0.2);
-
-    this.boardFrame.add([shadow, panel, inner]);
+    this.boardFrame?.destroy();
+    this.boardFrame = this.add.image(GAME_SIZE / 2, GAME_SIZE / 2, ASSET_KEYS.board).setDepth(1);
   }
 
   private createHud(): void {
@@ -190,7 +191,19 @@ export class GameplayScene extends Phaser.Scene {
     });
     this.hud.mount();
     root.hidden = true;
+
+    const endRoot = document.getElementById('end-root');
+    if (!endRoot) {
+      throw new Error('Missing #end-root');
+    }
+    this.endScreen = new EndScreen(endRoot, this.handlePlayAgain);
   }
+
+  private handlePlayAgain = (): void => {
+    this.ensureAudioStarted();
+    this.playSound(ASSET_KEYS.audio.click, { volume: 0.42 });
+    this.startNewPuzzle();
+  };
 
   private showStartMenu(): void {
     const root = document.getElementById('menu-root');
@@ -202,12 +215,15 @@ export class GameplayScene extends Phaser.Scene {
     document.getElementById('app')?.classList.add('is-menu-open');
     root.hidden = false;
     root.innerHTML = `
+      ${languageToggleHtml('menu-lang-toggle')}
       <div class="menu-content">
-        ${languageToggleHtml('menu-lang-toggle')}
-        <p class="menu-kicker">${t('menu.kicker')}</p>
-        <h1>${t('menu.title')}</h1>
+        <img class="menu-cat" style="--cols:88" src="${menuCat}" alt="" aria-hidden="true" />
+        <h1>${stitchedTextHtml('menu.title', 'menu-title')}</h1>
         <p class="menu-copy">${t('menu.copy')}</p>
-        <button class="menu-start" type="button">${t('menu.start')}</button>
+        <button class="menu-start sew-button" type="button">
+          <img class="sew-button-art" src="${sewingButton}" alt="" aria-hidden="true" />
+          ${stitchedTextHtml('menu.start', 'sew-label')}
+        </button>
       </div>
     `;
 
@@ -246,6 +262,8 @@ export class GameplayScene extends Phaser.Scene {
     if (hudRoot) {
       hudRoot.hidden = false;
     }
+    // The canvas parent may have changed size while the menu covered it.
+    this.scale.refresh();
   }
 
   private handleStartClick = (): void => {
@@ -296,39 +314,31 @@ export class GameplayScene extends Phaser.Scene {
   }
 
   private createTileView(point: GridPoint, kind: TileKind): void {
-    const { x, y } = this.cellToWorld(point);
-    const container = this.add.container(x, y).setSize(TILE_SIZE, TILE_SIZE);
-    const content = this.add.container(0, 0).setSize(TILE_SIZE, TILE_SIZE);
-    const shadow = this.add.ellipse(3, 8, TILE_SIZE * 0.86, TILE_SIZE * 0.72, 0x153238, 0.16);
-    const bg = this.add.rectangle(0, 0, TILE_SIZE, TILE_SIZE, 0xfff8e8, 0.98);
-    const sprite = this.add.image(0, 0, ASSET_KEYS.tile[kind]).setDisplaySize(TILE_ICON_SIZE, TILE_ICON_SIZE);
+    const { x, y } = cellToWorld(point);
+    const container = this.add.container(x, y).setSize(CELL_SIZE, CELL_SIZE);
+    const content = this.add.container(0, 0).setSize(CELL_SIZE, CELL_SIZE);
+    const sprite = this.add.image(0, 0, ASSET_KEYS.tile[kind]).setDisplaySize(CELL_SIZE, CELL_SIZE);
+    const outline = this.add.graphics();
 
-    bg.setStrokeStyle(2, 0x2f5861, 0.2);
-    content.add([shadow, bg, sprite]);
+    content.add([sprite, outline]);
     container.add(content);
     this.boardLayer?.add(container);
-    this.tileViews.set(this.key(point), { container, content, shadow, bg, sprite, kind });
+    this.tileViews.set(this.key(point), { container, content, outline, sprite, kind });
   }
 
   private createBoardInputZone(): void {
-    const boardPixels = BOARD_SIZE * TILE_SIZE + (BOARD_SIZE - 1) * TILE_GAP;
     this.boardInputZone = this.add
-      .zone(
-        BOARD_X + boardPixels / 2,
-        BOARD_Y + boardPixels / 2,
-        boardPixels + TILE_GAP,
-        boardPixels + TILE_GAP,
-      )
+      .zone(BOARD_ORIGIN + BOARD_PIXELS / 2, BOARD_ORIGIN + BOARD_PIXELS / 2, BOARD_PIXELS, BOARD_PIXELS)
       .setDepth(40)
       .setInteractive();
     this.boardInputZone.on(Phaser.Input.Events.POINTER_DOWN, (pointer: Phaser.Input.Pointer) => {
-      const point = this.pointerToCell(pointer);
+      const point = worldToCell(pointer.worldX, pointer.worldY);
       if (point) {
         this.handleBoardPointer(point, pointer.id);
       }
     });
     this.boardInputZone.on(Phaser.Input.Events.POINTER_MOVE, (pointer: Phaser.Input.Pointer) => {
-      this.setHovered(this.pointerToCell(pointer));
+      this.setHovered(worldToCell(pointer.worldX, pointer.worldY));
     });
     this.boardInputZone.on(Phaser.Input.Events.POINTER_OUT, () => {
       this.setHovered(undefined);
@@ -400,7 +410,7 @@ export class GameplayScene extends Phaser.Scene {
       if (!view) {
         continue;
       }
-      const { x, y } = this.cellToWorld(point);
+      const { x, y } = cellToWorld(point);
       this.tweens.add({
         targets: view.container,
         scale: { from: 1, to: 1.28 },
@@ -464,39 +474,33 @@ export class GameplayScene extends Phaser.Scene {
       return;
     }
 
-    const fromWorld = this.cellToWorld(from);
-    const toWorld = this.cellToWorld(to);
+    const fromWorld = cellToWorld(from);
+    const toWorld = cellToWorld(to);
     this.tweens.add({ targets: fromView.container, x: toWorld.x, y: toWorld.y, duration: 170, ease: 'Sine.easeInOut' });
     this.tweens.add({ targets: toView.container, x: fromWorld.x, y: fromWorld.y, duration: 170, ease: 'Sine.easeInOut' });
   }
 
   private burstParticles(x: number, y: number, kind: TileKind): void {
-    const ring = this.add.circle(x, y, 12, 0xffefbd, 0.42).setDepth(34);
-    this.tweens.add({
-      targets: ring,
-      scale: 3.2,
-      alpha: 0,
-      duration: 420,
-      ease: 'Cubic.easeOut',
-      onComplete: () => ring.destroy(),
-    });
-
-    const textures = [ASSET_KEYS.tile[kind], ASSET_KEYS.fx.sparkleParticle, ASSET_KEYS.fx.pawParticle];
-    for (let index = 0; index < 16; index += 1) {
-      const particle = this.add.image(x, y, textures[index % textures.length]).setDepth(35);
-      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-      const distance = Phaser.Math.Between(26, 68);
-      particle.setScale(Phaser.Math.FloatBetween(0.16, 0.34));
-      particle.setAngle(Phaser.Math.Between(-30, 30));
+    const thread = THREAD.tile[kind];
+    for (let index = 0; index < 12; index += 1) {
+      const isStitch = index % 3 !== 0;
+      const particle = this.add
+        .image(x, y, isStitch ? ASSET_KEYS.fx.stitch : ASSET_KEYS.fx.thread)
+        .setDepth(35)
+        .setTint(thread);
+      const angle = (index / 12) * Math.PI * 2 + Phaser.Math.FloatBetween(-0.25, 0.25);
+      const distance = Phaser.Math.Between(34, 78);
+      particle.setScale(isStitch ? Phaser.Math.FloatBetween(0.4, 0.6) : Phaser.Math.FloatBetween(0.8, 1.1));
+      particle.setAngle(Phaser.Math.Between(-20, 20));
       this.tweens.add({
         targets: particle,
         x: x + Math.cos(angle) * distance,
-        y: y + Math.sin(angle) * distance - Phaser.Math.Between(4, 16),
+        y: y + Math.sin(angle) * distance + Phaser.Math.Between(6, 22),
         scale: 0,
         alpha: 0,
-        angle: particle.angle + Phaser.Math.Between(-80, 80),
-        duration: Phaser.Math.Between(420, 680),
-        ease: 'Back.easeOut',
+        angle: particle.angle + Phaser.Math.Between(-90, 90),
+        duration: Phaser.Math.Between(460, 720),
+        ease: 'Cubic.easeOut',
         onComplete: () => particle.destroy(),
       });
     }
@@ -577,6 +581,61 @@ export class GameplayScene extends Phaser.Scene {
       this.playSound(ASSET_KEYS.audio.hover, { volume: 0.12 });
       this.syncTileVisual(point);
     }
+    this.drawPowerUpTarget();
+  }
+
+  /** Previews the row (wand) or column (stamp) the armed power-up would clear. */
+  private drawPowerUpTarget(): void {
+    this.targetGraphics?.destroy();
+    this.targetGraphics = undefined;
+    const kind = this.pendingPowerUp;
+    if (!kind || kind === 'snack') {
+      return;
+    }
+
+    const graphics = this.add.graphics().setDepth(30);
+    this.targetGraphics = graphics;
+    const hovered = this.hovered;
+    if (!hovered) {
+      this.drawRunningStitch(graphics, BOARD_ORIGIN, BOARD_ORIGIN, BOARD_PIXELS, BOARD_PIXELS, THREAD.madder, 0.9, 4);
+      return;
+    }
+
+    if (kind === 'wand') {
+      this.drawRunningStitch(graphics, BOARD_ORIGIN, BOARD_ORIGIN + hovered.y * CELL_SIZE, BOARD_PIXELS, CELL_SIZE, THREAD.madder, 1, 5);
+    } else {
+      this.drawRunningStitch(graphics, BOARD_ORIGIN + hovered.x * CELL_SIZE, BOARD_ORIGIN, CELL_SIZE, BOARD_PIXELS, THREAD.madder, 1, 5);
+    }
+  }
+
+  /** A dashed "over one, under one" stitch line following the aida grid. */
+  private drawRunningStitch(
+    graphics: Phaser.GameObjects.Graphics,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    color: number,
+    alpha: number,
+    thickness: number,
+  ): void {
+    const inset = thickness / 2 + 2;
+    const left = x + inset;
+    const top = y + inset;
+    const right = x + width - inset;
+    const bottom = y + height - inset;
+    graphics.lineStyle(thickness, color, alpha);
+    const dash = STITCH;
+    for (let p = left; p < right; p += dash * 2) {
+      const end = Math.min(p + dash, right);
+      graphics.lineBetween(p, top, end, top);
+      graphics.lineBetween(p, bottom, end, bottom);
+    }
+    for (let p = top; p < bottom; p += dash * 2) {
+      const end = Math.min(p + dash, bottom);
+      graphics.lineBetween(left, p, left, end);
+      graphics.lineBetween(right, p, right, end);
+    }
   }
 
   private syncTileVisual(point: GridPoint): void {
@@ -587,12 +646,14 @@ export class GameplayScene extends Phaser.Scene {
 
     const isSelected = this.pointsEqual(this.selected, point);
     const isHovered = this.pointsEqual(this.hovered, point);
-    const targetScale = isSelected ? 1.08 : isHovered ? 1.045 : 1;
-    const strokeColor = isSelected ? 0xf2a64b : isHovered ? 0x20b7b3 : 0x2f5861;
-    const strokeAlpha = isSelected ? 0.95 : isHovered ? 0.72 : 0.2;
-    const strokeWidth = isSelected ? 4 : isHovered ? 3 : 2;
+    const targetScale = isSelected ? 1.08 : isHovered && !this.pendingPowerUp ? 1.04 : 1;
 
-    view.bg.setStrokeStyle(strokeWidth, strokeColor, strokeAlpha);
+    view.outline.clear();
+    if (isSelected) {
+      this.drawRunningStitch(view.outline, -CELL_SIZE / 2, -CELL_SIZE / 2, CELL_SIZE, CELL_SIZE, THREAD.madder, 1, 5);
+    } else if (isHovered && !this.pendingPowerUp) {
+      this.drawRunningStitch(view.outline, -CELL_SIZE / 2, -CELL_SIZE / 2, CELL_SIZE, CELL_SIZE, THREAD.straw, 0.9, 3);
+    }
     view.scaleTween?.stop();
     view.content.x = view.invalidTween ? view.content.x : 0;
     view.scaleTween = this.tweens.add({
@@ -625,6 +686,7 @@ export class GameplayScene extends Phaser.Scene {
     this.hintGraphics = this.add.graphics().setDepth(30);
     this.drawHintCell(hint.from);
     this.drawHintCell(hint.to);
+    this.tweens.add({ targets: this.hintGraphics, alpha: { from: 1, to: 0.35 }, duration: 380, yoyo: true, repeat: -1 });
     const timer = this.time.delayedCall(1600, this.clearHint);
     this.activeTimers.push(timer);
   };
@@ -658,15 +720,17 @@ export class GameplayScene extends Phaser.Scene {
 
     this.pendingPowerUp = this.pendingPowerUp === kind ? undefined : kind;
     this.clearHint();
-    if (this.pendingPowerUp) {
-      this.showBoardTargetPrompt(kind);
-    }
+    this.setSelected(undefined);
+    this.hud?.setArmedPowerUp(this.pendingPowerUp);
+    this.drawPowerUpTarget();
   };
 
   private applyPowerUp(kind: PowerUpKind, point: GridPoint): void {
     const boardBeforePowerUp = this.cloneBoard(this.state.board);
     const result = usePowerUp(this.state, kind, point);
     this.pendingPowerUp = undefined;
+    this.hud?.setArmedPowerUp(undefined);
+    this.drawPowerUpTarget();
     if (!result.accepted) {
       this.playSound(ASSET_KEYS.audio.invalid, { volume: 0.42 });
       this.signalInvalid(point, 1);
@@ -734,7 +798,7 @@ export class GameplayScene extends Phaser.Scene {
           continue;
         }
 
-        const target = this.cellToWorld(point);
+        const target = cellToWorld(point);
         const sourceWorld = sourceBoard
           ? { x: target.x, y: target.y - 18 }
           : {
@@ -777,10 +841,10 @@ export class GameplayScene extends Phaser.Scene {
         continue;
       }
 
-      const target = this.cellToWorld(drop.to);
+      const target = cellToWorld(drop.to);
       const source = drop.from && sourceBoard[drop.from.y]?.[drop.from.x] === drop.kind
-        ? this.cellToWorld(drop.from)
-        : { x: target.x, y: BOARD_Y - TILE_SIZE * 0.7 };
+        ? cellToWorld(drop.from)
+        : { x: target.x, y: BOARD_ORIGIN - CELL_SIZE * 0.7 };
       const distance = Math.abs(source.y - target.y);
 
       view.container.setPosition(source.x, source.y);
@@ -825,7 +889,7 @@ export class GameplayScene extends Phaser.Scene {
         continue;
       }
 
-      const target = this.cellToWorld(move.to);
+      const target = cellToWorld(move.to);
       view.container.setDepth(24);
       this.tweens.add({
         targets: view.container,
@@ -848,27 +912,13 @@ export class GameplayScene extends Phaser.Scene {
 
   }
 
-  private showBoardTargetPrompt(kind: PowerUpKind): void {
-    this.hintGraphics = this.add.graphics().setDepth(30);
-    this.hintGraphics.lineStyle(4, kind === 'wand' ? 0xffb15a : 0x20b7b3, 0.9);
-    const boardPixels = BOARD_SIZE * TILE_SIZE + (BOARD_SIZE - 1) * TILE_GAP;
-    this.hintGraphics.strokeRoundedRect(
-      BOARD_X - 4,
-      BOARD_Y - 4,
-      boardPixels + 8,
-      boardPixels + 8,
-      14,
-    );
-  }
-
   private drawHintCell(point: GridPoint): void {
     if (!this.hintGraphics) {
       return;
     }
 
-    const { x, y } = this.cellToWorld(point);
-    this.hintGraphics.lineStyle(5, 0x20b7b3, 0.95);
-    this.hintGraphics.strokeRoundedRect(x - TILE_SIZE / 2 + 4, y - TILE_SIZE / 2 + 4, TILE_SIZE - 8, TILE_SIZE - 8, 10);
+    const { x, y } = cellToWorld(point);
+    this.drawRunningStitch(this.hintGraphics, x - CELL_SIZE / 2, y - CELL_SIZE / 2, CELL_SIZE, CELL_SIZE, THREAD.straw, 1, 6);
   }
 
   private clearHint = (): void => {
@@ -878,6 +928,9 @@ export class GameplayScene extends Phaser.Scene {
 
   private updateHud(): void {
     this.hud?.update(this.state);
+    if (this.state.status !== 'playing') {
+      this.endScreen?.show(this.state);
+    }
   }
 
   private cleanupGameState(opts: { keepHud?: boolean; destroyHud?: boolean; removeDocumentListeners?: boolean } = {}): void {
@@ -897,12 +950,17 @@ export class GameplayScene extends Phaser.Scene {
     this.boardLayer?.destroy(true);
     this.boardLayer = undefined;
     this.pendingPowerUp = undefined;
+    this.hud?.setArmedPowerUp(undefined);
+    this.targetGraphics?.destroy();
+    this.targetGraphics = undefined;
     this.inputLocked = false;
     this.hovered = undefined;
 
     if (opts.destroyHud || !opts.keepHud) {
       this.hud?.destroy();
       this.hud = undefined;
+      this.endScreen?.hide();
+      this.endScreen = undefined;
       this.music?.destroy();
       this.music = undefined;
       this.audioStarted = false;
@@ -918,35 +976,6 @@ export class GameplayScene extends Phaser.Scene {
     this.time.paused = document.hidden;
     this.sound.mute = document.hidden;
   };
-
-  private cellToWorld(point: GridPoint): GridPoint {
-    return {
-      x: BOARD_X + TILE_SIZE / 2 + point.x * (TILE_SIZE + TILE_GAP),
-      y: BOARD_Y + TILE_SIZE / 2 + point.y * (TILE_SIZE + TILE_GAP),
-    };
-  }
-
-  private pointerToCell(pointer: Phaser.Input.Pointer): GridPoint | undefined {
-    const localX = pointer.worldX - BOARD_X;
-    const localY = pointer.worldY - BOARD_Y;
-    const boardPixels = BOARD_SIZE * TILE_SIZE + (BOARD_SIZE - 1) * TILE_GAP;
-    if (localX < 0 || localY < 0 || localX >= boardPixels || localY >= boardPixels) {
-      return undefined;
-    }
-
-    const stride = TILE_SIZE + TILE_GAP;
-    const x = Math.floor(localX / stride);
-    const y = Math.floor(localY / stride);
-    if (localX % stride >= TILE_SIZE || localY % stride >= TILE_SIZE) {
-      return undefined;
-    }
-
-    if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE) {
-      return undefined;
-    }
-
-    return { x, y };
-  }
 
   private key(point: GridPoint): string {
     return `${point.x},${point.y}`;

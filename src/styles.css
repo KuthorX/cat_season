@@ -1,18 +1,30 @@
+/* Fusion Pixel 12 px (OFL): the same square grid the stitches are charted on. Use multiples of 12px. */
 @font-face {
-  font-family: "LXGW WenKai";
-  src: url("../assets/fonts/LXGWWenKai-Regular.ttf") format("truetype");
+  font-family: "Fusion Pixel";
+  src: url("./assets/fonts/pixel-subset.woff2") format("woff2");
   font-display: swap;
 }
 
 :root {
-  font-family:
-    "LXGW WenKai", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: #173037;
-  background: #16333a;
+  --linen: #d8c8a6;
+  --aida: #efe6d2;
+  --ink: #33241a;
+  --pencil: #3d3128;
+  --pencil-soft: #7a6a58;
+  --madder: #a53f26;
+  --pad: clamp(12px, 2.6vh, 28px);
+  --gap: clamp(20px, 4vw, 64px);
+  /* the board's side, and one of its stitches on screen; HUD art is sized in the same stitches */
+  /* the key is 0.72 of the board's width, so everything scales together */
+  --stage: min(100dvh - var(--pad) * 2, (100vw - var(--pad) * 2 - var(--gap)) / 1.72);
+  --st: calc(var(--stage) * 8 / 960);
+  font-family: "Fusion Pixel", ui-monospace, monospace;
+  font-size: 12px;
+  color: var(--pencil);
+  background: var(--linen) url("./assets/art/linen.webp") center / cover no-repeat fixed;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 * {
@@ -22,567 +34,536 @@
 body {
   margin: 0;
   min-width: 320px;
-  min-height: 100vh;
-  overflow: auto;
+  overflow: hidden;
 }
 
 button {
   font: inherit;
+  color: inherit;
 }
 
+h1,
+h2,
+p,
+dl,
+dd {
+  margin: 0;
+}
+
+img {
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* ---------- layout: framed board left, pattern key right ---------- */
+
 #app {
-  --app-pad: clamp(12px, 1.4vw, 24px);
-  --hud-width: clamp(300px, 23vw, 430px);
-  --shell-gap: clamp(12px, 1.2vw, 22px);
-  --shell-height: calc(100vh - var(--app-pad) * 2 - 2px);
-  width: 100%;
   height: 100vh;
-  padding: var(--app-pad);
-  display: grid;
-  place-items: center;
-  background:
-    linear-gradient(90deg, rgba(14, 35, 38, 0.5) 0%, rgba(14, 35, 38, 0.18) 44%, rgba(14, 35, 38, 0.48) 100%),
-    linear-gradient(0deg, rgba(14, 35, 38, 0.64) 0%, rgba(14, 35, 38, 0.1) 55%),
-    url("../assets/environment/cat-season-bg.png") center / cover no-repeat,
-    linear-gradient(135deg, #19383f 0%, #244b4a 46%, #822f46 100%);
+  height: 100dvh;
+  padding: var(--pad);
 }
 
 .game-shell {
-  width: min(100%, calc(var(--shell-height) * 1.5 + var(--hud-width) + var(--shell-gap)));
-  height: min(var(--shell-height), calc((100vw - var(--app-pad) * 2 - var(--hud-width) - var(--shell-gap)) / 1.5));
-  min-height: 560px;
+  height: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--hud-width);
-  gap: var(--shell-gap);
-  align-items: stretch;
-  container-type: inline-size;
-}
-
-#app.is-menu-open .game-shell {
-  max-width: none;
-  max-height: none;
-  height: 100%;
-  grid-template-columns: 1fr;
-  gap: 0;
-}
-
-#app.is-menu-open .stage-panel {
-  height: 100%;
-  aspect-ratio: auto;
-  border: 0;
-  box-shadow: none;
-  background: transparent;
-}
-
-#app.is-menu-open #game-root canvas {
-  display: none;
-}
-
-.stage-panel,
-.hud-panel {
-  min-height: 0;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 22px 70px rgba(7, 21, 24, 0.28);
-  overflow: hidden;
+  grid-template-columns: var(--stage) calc(var(--stage) * 0.72);
+  justify-content: center;
+  gap: var(--gap);
 }
 
 .stage-panel {
   position: relative;
-  width: 100%;
-  height: 100%;
-  align-self: center;
-  min-width: 0;
-  background: transparent;
-  filter: drop-shadow(0 18px 34px rgba(8, 24, 27, 0.25));
+  width: var(--stage);
+  height: var(--stage);
 }
 
 #game-root {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
 }
 
 #game-root canvas {
-  max-width: 100%;
-  max-height: 100%;
   display: block;
 }
 
-.start-menu {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  display: grid;
-  align-items: end;
-  justify-items: start;
-  padding: clamp(24px, 5vw, 56px);
-  color: #fff8e8;
-}
+/* ---------- stitched pieces ---------- */
 
-.start-menu[hidden],
-.hud-panel[hidden] {
-  display: none;
-}
-
-.menu-content {
-  width: min(520px, 100%);
-  display: grid;
-  gap: 14px;
-  text-shadow: 0 2px 18px rgba(9, 25, 28, 0.54);
-}
-
-.menu-kicker,
-.menu-copy {
-  margin: 0;
-}
-
-.menu-kicker {
-  color: #ffe4aa;
-  font-size: clamp(1rem, 2.3vw, 1.25rem);
-  font-weight: 800;
-}
-
-.menu-content h1 {
-  color: #fff8e8;
-  font-size: clamp(3rem, 9vw, 5.8rem);
-  line-height: 0.95;
-}
-
-.menu-copy {
-  max-width: 24em;
-  color: #fff2d7;
-  font-size: clamp(1.08rem, 2.4vw, 1.35rem);
-  line-height: 1.35;
-}
-
-.menu-start {
-  width: fit-content;
-  min-width: 148px;
-  min-height: 48px;
-  margin-top: 6px;
-  padding: 10px 22px;
-  border: 1px solid rgba(255, 248, 232, 0.58);
-  color: #fff8e8;
-  background: #c14f53;
-  box-shadow: 0 10px 28px rgba(15, 34, 38, 0.26);
-  cursor: pointer;
-  transition:
-    transform 180ms ease-out,
-    background-color 180ms ease-out,
-    box-shadow 180ms ease-out;
-}
-
-.menu-start:hover,
-.menu-start:focus-visible {
-  outline: 3px solid rgba(255, 228, 170, 0.42);
-  outline-offset: 3px;
-  background: #d4615d;
-  box-shadow: 0 14px 32px rgba(15, 34, 38, 0.32);
-  transform: translateY(-1px);
-}
-
-.hud-panel {
-  height: 100%;
-  padding: clamp(16px, 1.5vw, 24px);
-  display: flex;
-  flex-direction: column;
-  gap: clamp(10px, 1.1vw, 16px);
-  background:
-    linear-gradient(180deg, rgba(255, 250, 240, 0.96), rgba(247, 238, 219, 0.94));
-  backdrop-filter: blur(14px);
-  overflow-y: auto;
-}
-
-.brand-block {
-  display: grid;
-  gap: 4px;
-}
-
-h1 {
-  margin: 0;
-  color: #182f36;
-  font-size: 2rem;
-  line-height: 1;
-  letter-spacing: 0;
-}
-
-.status-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.stat-box:nth-child(2) {
-  grid-column: 1 / -1;
-  grid-row: 2;
-}
-
-.stat-box {
-  min-width: 0;
-  padding: 12px;
-  display: grid;
-  gap: 4px;
-  background: rgba(255, 252, 246, 0.9);
-  border: 1px solid rgba(45, 119, 119, 0.24);
-  box-shadow: inset 0 -1px 0 rgba(23, 48, 55, 0.05);
-}
-
-.stat-label {
-  color: #6f5a4f;
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-
-.stat-box strong {
-  color: #c14f53;
-  font-size: 1.38rem;
-  line-height: 1;
-  overflow-wrap: anywhere;
-}
-
-.goal-list {
-  display: grid;
-  gap: 6px;
-}
-
-.powerup-list {
-  display: grid;
-  gap: 6px;
-}
-
-.goal-row {
-  min-height: 42px;
-  padding: 7px 10px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  background: rgba(237, 247, 239, 0.92);
-  border-left: 4px solid #2d7777;
-  transition:
-    background-color 180ms ease-out,
-    transform 180ms ease-out;
-}
-
-.goal-name {
-  min-width: 0;
+/* Numerals: sprite strips from tools/art/generate.py, 7x9 stitch slots, one em = 9 stitches. */
+.sn-run {
   display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 800;
+  align-items: flex-end;
+  height: 1em;
+  line-height: 1;
+  vertical-align: bottom;
 }
 
-.goal-icon {
-  width: 30px;
-  height: 30px;
+.sn {
+  width: calc(1em * 7 / 9);
+  height: 1em;
   flex: 0 0 auto;
+  background-image: var(--sn-sheet);
+  background-repeat: no-repeat;
+  background-size: calc(1em * 84 / 9) 1em;
+  background-position: calc(var(--g) * -1em * 7 / 9) 0;
+}
+
+.sn-narrow {
+  width: calc(1em * 4 / 9);
+}
+
+.sn-text {
+  font-size: 0.6em;
+}
+
+.sn-ink {
+  --sn-sheet: url("./assets/art/digits-ink.png");
+}
+
+.sn-madder {
+  --sn-sheet: url("./assets/art/digits-madder.png");
+}
+
+.stitched-text,
+.menu-cat {
   display: block;
+  width: calc(var(--cols) * var(--text-st, 2px));
+  max-width: none;
+  height: auto;
 }
 
-.goal-name span,
-.goal-row strong {
-  white-space: nowrap;
+/* Pencil notes */
+.stat-label {
+  display: block;
+  color: var(--pencil-soft);
+  font-size: 24px;
+  line-height: 1;
 }
 
-.goal-row.is-complete {
-  background: #f3efe6;
-  color: #87766a;
-  border-left-color: #d7b46a;
-}
-
-.result-line {
-  min-height: 38px;
-  margin: auto 0 0;
-  color: #4b443e;
-  font-size: 0.88rem;
-  line-height: 1.35;
-}
-
-.result-line[data-status="won"] {
-  color: #21736c;
-  font-weight: 800;
-}
-
-.result-line[data-status="lost"] {
-  color: #a33448;
-  font-weight: 800;
-}
-
-.powerup-button {
-  width: 100%;
-  min-height: 48px;
-  padding: 8px 10px;
-  border: 1px solid rgba(45, 119, 119, 0.24);
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    "name count"
-    "desc count";
-  gap: 2px 10px;
-  align-items: center;
-  color: #173037;
-  background: rgba(255, 252, 246, 0.92);
-  text-align: left;
-  cursor: pointer;
-  transition:
-    border-color 180ms ease-out,
-    background-color 180ms ease-out,
-    transform 180ms ease-out;
-}
-
-.powerup-button:disabled {
-  color: #8c7c72;
-  background: #f2eadc;
-  cursor: default;
-}
-
-.powerup-button:not(:disabled):hover,
-.powerup-button:not(:disabled):focus-visible {
-  outline: 3px solid rgba(32, 183, 179, 0.3);
-  outline-offset: 1px;
-  border-color: rgba(32, 183, 179, 0.5);
-  background: #fffdf8;
-  transform: translateY(-1px);
-}
-
-.powerup-name {
-  grid-area: name;
-  font-weight: 800;
-}
-
-.powerup-desc {
-  grid-area: desc;
-  color: #6f5a4f;
-  font-size: 0.78rem;
-}
-
-.powerup-button strong {
-  grid-area: count;
-  min-width: 28px;
-  color: #c14f53;
-  font-size: 1.2rem;
-  text-align: right;
-}
-
-.command-row {
-  display: flex;
-  gap: 10px;
-}
-
-.icon-button {
-  width: 44px;
-  height: 44px;
+/* Sewing button: a real four-hole button with its stitched label. */
+.sew-button {
+  --text-st: 2px;
+  padding: 4px;
   border: 0;
   display: grid;
-  place-items: center;
-  color: #173037;
-  background: #fffaf0;
-  border: 1px solid rgba(23, 48, 55, 0.18);
+  justify-items: center;
+  gap: 10px;
+  background: none;
   cursor: pointer;
-  transition:
-    transform 180ms ease-out,
-    background-color 180ms ease-out,
-    border-color 180ms ease-out;
 }
 
-.icon-button svg {
-  width: 24px;
-  height: 24px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.sew-button-art {
+  width: 96px;
+  height: 96px;
+  display: block;
+  transition: transform 200ms ease-out;
 }
 
-.icon-button.primary {
-  color: #fffaf0;
-  background: #c14f53;
-  border-color: #c14f53;
+.sew-button:hover .sew-button-art,
+.sew-button:focus-visible .sew-button-art {
+  transform: rotate(-24deg) translateY(-2px);
 }
 
-.icon-button:hover,
-.icon-button:focus-visible {
-  outline: 3px solid rgba(32, 183, 179, 0.38);
-  outline-offset: 2px;
-  border-color: rgba(32, 183, 179, 0.45);
-  transform: translateY(-1px);
+.sew-button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 4px;
 }
 
+.sew-button.is-inline {
+  grid-auto-flow: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.sew-button.is-inline .sew-button-art {
+  width: calc(var(--st) * 9);
+  height: calc(var(--st) * 9);
+}
+
+/* Language switch: pencil marks, the active one underlined in madder thread. */
 .lang-toggle {
-  min-height: 44px;
-  padding: 0 12px;
+  position: absolute;
+  z-index: 6;
+  top: 0;
+  right: 0;
+  min-height: 40px;
+  padding: 0 4px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  border: 1px solid rgba(23, 48, 55, 0.18);
-  color: #8c7c72;
-  background: #fffaf0;
-  font-weight: 700;
+  gap: 8px;
+  border: 0;
+  background: none;
+  color: var(--pencil-soft);
+  font-size: 24px;
   white-space: nowrap;
   cursor: pointer;
-  transition:
-    transform 180ms ease-out,
-    border-color 180ms ease-out;
 }
 
 .lang-toggle .is-active {
-  color: #173037;
-  font-weight: 800;
+  color: var(--ink);
+  box-shadow: 0 3px 0 var(--madder);
 }
 
 .lang-toggle:hover,
 .lang-toggle:focus-visible {
-  outline: 3px solid rgba(32, 183, 179, 0.38);
+  color: var(--ink);
+  outline: 2px solid var(--pencil);
   outline-offset: 2px;
-  border-color: rgba(32, 183, 179, 0.45);
-  transform: translateY(-1px);
 }
 
-.hud-lang-toggle {
-  margin-left: auto;
+/* ---------- start menu ---------- */
+
+.start-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  padding: clamp(20px, 5vh, 56px) clamp(24px, 6vw, 96px);
+  display: grid;
+  place-items: center;
+  background: var(--linen) url("./assets/art/linen.webp") center / cover no-repeat;
+  overflow: hidden;
+}
+
+.start-menu[hidden],
+.hud-panel[hidden],
+.end-screen[hidden] {
+  display: none;
 }
 
 .menu-lang-toggle {
+  top: auto;
+  bottom: clamp(12px, 3vh, 28px);
+  right: clamp(16px, 3vw, 40px);
+}
+
+.menu-content {
+  /* one stitch pitch for the cat and the title so they read as one piece of work */
+  --text-st: min(0.8vh, 0.56vw);
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+
+/* The cat naps on top of the stitched title, tail draped over the letters. */
+.menu-cat {
+  position: relative;
+  z-index: 1;
+  margin-bottom: calc(var(--text-st) * -2);
+  margin-left: calc(var(--text-st) * 44);
+}
+
+.menu-copy {
+  max-width: 34em;
+  margin-top: clamp(16px, 3.6vh, 32px);
+  color: var(--pencil);
+  font-size: 24px;
+  line-height: 1.5;
+}
+
+.menu-start {
+  --text-st: 3px;
+  margin-top: clamp(16px, 3.6vh, 36px);
+}
+
+/* ---------- HUD: the pattern key, worked straight onto the linen ---------- */
+
+/* The key is a second, narrower frame of the same aida, so its stitches share the board's pitch. */
+.hud-panel {
+  position: relative;
+  min-height: 0;
+  height: var(--stage);
+  padding: calc(var(--st) * 2) calc(var(--st) * 4);
+  border: calc(var(--st) * 2.75) solid transparent;
+  border-image: url("./assets/art/frame-wood.png") 22 / calc(var(--st) * 2.75) round;
+  background: var(--aida) url("./assets/art/aida-tile.webp") repeat;
+  background-size: calc(var(--st) * 8) calc(var(--st) * 8);
+  background-origin: padding-box;
+  background-clip: padding-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hud-lang-toggle {
+  position: static;
+  align-self: end;
+  justify-self: start;
+}
+
+.hud-stats {
+  display: flex;
+  align-items: flex-end;
+  gap: calc(var(--st) * 3);
+}
+
+/* fixed slots so Round doesn't drift as the score grows (glyph = 7 stitches wide) */
+.hud-stat.is-moves {
+  min-width: calc(var(--st) * 16);
+}
+
+.hud-stat.is-score {
+  min-width: calc(var(--st) * 27);
+}
+
+.hud-stat dd {
+  margin-top: 6px;
+  font-size: calc(var(--st) * 9);
+}
+
+.goal-list {
+  max-width: calc(var(--st) * 40);
+  display: grid;
+}
+
+.goal-row {
+  display: grid;
+  grid-template-columns: calc(var(--st) * 10) 1fr auto;
+  align-items: center;
+  gap: 12px;
+  font-size: 24px;
+  color: var(--pencil);
+}
+
+.goal-icon {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.goal-name {
+  white-space: nowrap;
+}
+
+.goal-row strong {
+  font-size: calc(var(--st) * 7);
+  font-weight: 400;
+  justify-self: end;
+}
+
+.goal-row.is-complete .goal-name {
+  color: var(--pencil-soft);
+  text-decoration: line-through 2px var(--madder);
+}
+
+.goal-row.is-complete strong,
+.goal-row.is-complete .goal-icon {
+  opacity: 0.4;
+}
+
+/* Power-ups and commands are stitched objects with a pencil note underneath. */
+.powerup-list {
+  display: flex;
+  gap: calc(var(--st) * 3);
+}
+
+.powerup-button,
+.tool-button {
+  padding: 4px;
+  border: 0;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  background: none;
+  color: var(--pencil);
+  text-align: center;
+  cursor: pointer;
+  transition: transform 160ms ease-out;
+}
+
+.powerup-button {
+  min-width: calc(var(--st) * 18);
+}
+
+.tool-icon {
+  width: calc(var(--st) * 14);
+  height: auto;
+  display: block;
+}
+
+.powerup-name {
+  margin-top: 2px;
+  font-size: 24px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.powerup-count {
+  color: var(--madder);
+  font-weight: 400;
+  font-size: 12px;
+}
+
+.powerup-desc {
+  font-size: 12px;
+  color: var(--pencil-soft);
+  white-space: nowrap;
+}
+
+.powerup-button:not(:disabled):hover,
+.powerup-button:not(:disabled):focus-visible,
+.tool-button:hover,
+.tool-button:focus-visible {
+  transform: translateY(-2px) rotate(-2deg);
+  outline: none;
+}
+
+.powerup-button:focus-visible .tool-icon,
+.tool-button:focus-visible .tool-icon {
+  outline: 2px solid var(--pencil);
+  outline-offset: 2px;
+}
+
+.powerup-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Armed power-up: lifted off the cloth and ringed in madder thread. */
+.powerup-button.is-armed .tool-icon {
+  transform: translateY(-4px) rotate(-6deg);
+  outline: 3px solid var(--madder);
+  outline-offset: 3px;
+}
+
+.hud-foot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: end;
+  gap: calc(var(--st) * 3);
+}
+
+.tool-button {
+  font-size: 24px;
+  white-space: nowrap;
+}
+
+.tool-button .tool-icon {
+  width: calc(var(--st) * 10);
+}
+
+.result-line {
+  min-height: 1.2em;
+  color: var(--madder);
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+/* ---------- end screen ---------- */
+
+.end-screen {
   position: absolute;
-  top: clamp(16px, 3vw, 32px);
-  right: clamp(16px, 3vw, 32px);
-  border-color: rgba(255, 248, 232, 0.58);
-  color: rgba(255, 242, 215, 0.72);
-  background: rgba(23, 48, 55, 0.42);
-  text-shadow: none;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
 }
 
-.menu-lang-toggle .is-active {
-  color: #fff8e8;
+.stage-panel:has(.end-screen:not([hidden])) #game-root {
+  filter: brightness(0.78);
 }
 
-@media (min-width: 1440px) {
-  #app {
-    --hud-width: clamp(360px, 21vw, 440px);
-    --shell-gap: clamp(16px, 1vw, 24px);
-  }
+/* A finished swatch laid over the framed board, hem worked in madder. */
+.end-card {
+  width: 66%;
+  aspect-ratio: 1;
+  padding: 11%;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: calc(var(--st) * 2);
+  text-align: center;
+  position: relative;
+  background: url("./assets/art/handkerchief.webp") center / 100% 100% no-repeat;
+  filter: drop-shadow(2px 4px 0 rgba(51, 36, 26, 0.22));
+  transform: rotate(-2deg);
 }
 
-@media (min-width: 901px) and (max-height: 1000px) {
-  .hud-panel {
-    gap: 8px;
-  }
-
-  .stat-box {
-    padding: 8px 10px;
-  }
-
-  .goal-row {
-    min-height: 34px;
-    padding: 4px 10px;
-  }
-
-  .goal-icon {
-    width: 24px;
-    height: 24px;
-  }
-
-  .powerup-button {
-    min-height: 42px;
-    padding: 5px 10px;
-  }
-
-  .result-line {
-    min-height: 0;
-  }
+.end-card {
+  --text-st: calc(var(--st) * 0.55);
 }
 
-@media (max-width: 900px) {
+.end-card .sew-button {
+  --text-st: calc(var(--st) * 0.36);
+}
+
+.end-body {
+  max-width: 22em;
+  color: var(--pencil);
+  font-size: 24px;
+  line-height: 1.6;
+  line-height: 1.25;
+}
+
+.end-tally {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: end;
+  gap: calc(var(--st) * 5);
+  padding: 4px 0;
+}
+
+.end-tally dt {
+  white-space: nowrap;
+}
+
+.end-tally dd {
+  margin-top: 4px;
+  font-size: calc(var(--st) * 9);
+}
+
+/* ---------- narrow screens: board on top, key below, page scrolls ---------- */
+
+@media (max-width: 860px), (max-aspect-ratio: 3/2) {
+  /* board still fits the viewport; the key follows below and the page scrolls */
+  :root {
+    --stage: min(100vw - var(--pad) * 2, 100dvh - var(--pad) * 2);
+  }
+
+  body {
+    overflow: auto;
+  }
+
   #app {
     height: auto;
     min-height: 100vh;
-    padding: 0;
-    align-items: start;
   }
 
   .game-shell {
-    width: 100%;
-    grid-template-columns: 1fr;
-    max-height: none;
-    min-height: 0;
     height: auto;
-    gap: 0;
+    grid-template-columns: minmax(0, min(100%, 640px));
+    justify-items: center;
   }
 
-  .stage-panel {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 3 / 2;
-    border: 0;
-    box-shadow: none;
-  }
-
-  .start-menu {
-    align-items: end;
-    padding: 22px;
-  }
-
+  /* the key keeps a readable stitch pitch even when the board shrinks to phone width */
   .hud-panel {
-    border: 0;
-    box-shadow: none;
+    --st: 5.6px;
+    width: 100%;
+    height: auto;
+    gap: 24px;
+  }
+
+  .hud-stat.is-score {
+    min-width: 0;
+  }
+
+  .powerup-list {
+    flex-wrap: wrap;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .menu-start,
-  .lang-toggle,
+  .sew-button-art,
   .powerup-button,
-  .icon-button,
-  .goal-row {
+  .tool-button {
     transition: none;
   }
 
-  .menu-start:hover,
-  .menu-start:focus-visible,
-  .lang-toggle:hover,
-  .lang-toggle:focus-visible,
+  .sew-button:hover .sew-button-art,
+  .sew-button:focus-visible .sew-button-art,
   .powerup-button:not(:disabled):hover,
   .powerup-button:not(:disabled):focus-visible,
-  .icon-button:hover,
-  .icon-button:focus-visible {
+  .tool-button:hover,
+  .tool-button:focus-visible {
     transform: none;
-  }
-}
-
-@media (max-width: 560px) {
-  .menu-content {
-    gap: 10px;
-  }
-
-  .menu-content h1 {
-    font-size: 2.6rem;
-  }
-
-  .menu-copy {
-    font-size: 1rem;
-  }
-
-  .menu-start {
-    min-height: 44px;
-    padding: 8px 18px;
-  }
-
-  .hud-panel {
-    padding: 18px;
-  }
-
-  .brand-block {
-    gap: 6px;
-  }
-
-  .status-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .stat-box {
-    padding: 12px;
   }
 }

@@ -1,7 +1,15 @@
 import { ASSET_PATHS } from '../assets/manifest';
+import toolHint from '../assets/art/tool-hint.png';
+import toolRestart from '../assets/art/tool-restart.png';
+import toolSnack from '../assets/art/tool-snack.png';
+import toolStamp from '../assets/art/tool-stamp.png';
+import toolWand from '../assets/art/tool-wand.png';
 import { formatNumber, onLocaleChange, t, toggleLocale } from '../i18n';
-import { findSuggestedMove, POWER_UP_KINDS, type PowerUpKind, type PuzzleState, type TileKind } from '../systems/catPuzzle';
+import { POWER_UP_KINDS, type PowerUpKind, type PuzzleState, type TileKind } from '../systems/catPuzzle';
 import { languageToggleHtml } from './languageToggle';
+import { stitchedNumberHtml } from './stitchedNumber';
+
+const POWER_UP_ART: Record<PowerUpKind, string> = { snack: toolSnack, wand: toolWand, stamp: toolStamp };
 
 export type HudActions = {
   onNewGame: () => void;
@@ -27,41 +35,36 @@ export class HudController {
 
   private render(): void {
     this.root.innerHTML = `
-      <div class="brand-block">
-        <h1>${t('hud.title')}</h1>
-      </div>
-      <div class="status-grid">
-        <div class="stat-box">
-          <span class="stat-label">${t('hud.moves')}</span>
-          <strong data-hud="moves">0</strong>
-        </div>
-        <div class="stat-box">
-          <span class="stat-label">${t('hud.score')}</span>
-          <strong data-hud="score">0</strong>
-        </div>
-        <div class="stat-box">
-          <span class="stat-label">${t('hud.round')}</span>
-          <strong data-hud="round">1</strong>
-        </div>
-      </div>
+      <header class="hud-top">
+        <dl class="hud-stats">
+          <div class="hud-stat is-moves">
+            <dt class="stat-label">${t('hud.moves')}</dt>
+            <dd data-hud="moves"></dd>
+          </div>
+          <div class="hud-stat is-score">
+            <dt class="stat-label">${t('hud.score')}</dt>
+            <dd data-hud="score"></dd>
+          </div>
+          <div class="hud-stat is-round">
+            <dt class="stat-label">${t('hud.round')}</dt>
+            <dd data-hud="round"></dd>
+          </div>
+        </dl>
+      </header>
       <section class="goal-list" aria-label="${t('hud.goalsLabel')}" data-hud="goals"></section>
       <section class="powerup-list" aria-label="${t('hud.powerupsLabel')}" data-hud="powerups"></section>
-      <p class="result-line" data-hud="result"></p>
-      <div class="command-row">
-        <button class="icon-button primary" type="button" data-action="new-game" aria-label="${t('hud.restart')}" title="${t('hud.restart')}">
-          <svg aria-hidden="true" viewBox="0 0 24 24">
-            <path d="M20 12a8 8 0 1 1-2.34-5.66" />
-            <path d="M20 4v6h-6" />
-          </svg>
-        </button>
-        <button class="icon-button" type="button" data-action="hint" aria-label="${t('hud.hint')}" title="${t('hud.hint')}">
-          <svg aria-hidden="true" viewBox="0 0 24 24">
-            <path d="M9.09 9a3 3 0 1 1 5.82 1c-.55 1.38-2.91 1.74-2.91 4" />
-            <path d="M12 18h.01" />
-          </svg>
-        </button>
+      <p class="result-line" data-hud="result" aria-live="polite"></p>
+      <footer class="hud-foot">
         ${languageToggleHtml('hud-lang-toggle')}
-      </div>
+        <button class="tool-button" type="button" data-action="hint">
+          <img class="tool-icon" src="${toolHint}" alt="" aria-hidden="true" />
+          <span>${t('hud.hint')}</span>
+        </button>
+        <button class="tool-button" type="button" data-action="new-game">
+          <img class="tool-icon" src="${toolRestart}" alt="" aria-hidden="true" />
+          <span>${t('hud.restart')}</span>
+        </button>
+      </footer>
     `;
 
     this.root.querySelector('[data-action="new-game"]')?.addEventListener('click', this.actions.onNewGame);
@@ -71,12 +74,21 @@ export class HudController {
 
   update(state: PuzzleState): void {
     this.state = state;
-    this.setText('moves', String(state.movesLeft));
-    this.setText('score', formatNumber(state.score));
-    this.setText('round', String(state.round));
+    this.setHtml('moves', stitchedNumberHtml(String(state.movesLeft), 'madder'));
+    this.setHtml('score', stitchedNumberHtml(formatNumber(state.score)));
+    this.setHtml('round', stitchedNumberHtml(String(state.round)));
     this.renderGoals(state);
     this.renderPowerUps(state);
     this.renderResult(state);
+  }
+
+  /** Marks the power-up waiting for a board target, or clears the mark. */
+  setArmedPowerUp(kind: PowerUpKind | undefined): void {
+    for (const button of this.root.querySelectorAll<HTMLElement>('[data-powerup]')) {
+      const armed = button.dataset.powerup === kind;
+      button.classList.toggle('is-armed', armed);
+      button.setAttribute('aria-pressed', String(armed));
+    }
   }
 
   destroy(): void {
@@ -103,11 +115,9 @@ export class HudController {
         const tileKind = kind as TileKind;
         return `
           <div class="goal-row ${value <= 0 ? 'is-complete' : ''}">
-            <span class="goal-name">
-              <img class="goal-icon" src="${ASSET_PATHS.tile[tileKind]}" alt="" aria-hidden="true" />
-              <span>${t(`tile.${tileKind}`)}</span>
-            </span>
-            <strong>${Math.max(0, value)}</strong>
+            <img class="goal-icon" src="${ASSET_PATHS.tile[tileKind]}" alt="" aria-hidden="true" />
+            <span class="goal-name">${t(`tile.${tileKind}`)}</span>
+            <strong>${stitchedNumberHtml(String(Math.max(0, value)))}</strong>
           </div>
         `;
       })
@@ -127,10 +137,11 @@ export class HudController {
     powerups.innerHTML = POWER_UP_KINDS.map((kind) => {
       const count = state.inventory[kind];
       return `
-        <button class="powerup-button" type="button" data-powerup="${kind}" ${count <= 0 ? 'disabled' : ''}>
+        <button class="powerup-button" type="button" data-powerup="${kind}" title="${t(`powerup.${kind}.desc`)}" ${count <= 0 ? 'disabled' : ''}>
+          <img class="tool-icon" src="${POWER_UP_ART[kind]}" alt="" aria-hidden="true" />
           <span class="powerup-name">${t(`powerup.${kind}.name`)}</span>
           <span class="powerup-desc">${t(`powerup.${kind}.desc`)}</span>
-          <strong>${count}</strong>
+          <strong class="powerup-count">×${count}</strong>
         </button>
       `;
     }).join('');
@@ -146,26 +157,15 @@ export class HudController {
       return;
     }
 
-    if (state.status === 'won') {
-      result.textContent = t('result.won');
-      result.dataset.status = 'won';
+    if (state.status !== 'playing') {
+      // The end screen carries the final message; don't repeat it here.
+      result.textContent = '';
+      result.dataset.status = state.status;
       return;
     }
 
-    if (state.status === 'lost') {
-      result.textContent = t('result.lost');
-      result.dataset.status = 'lost';
-      return;
-    }
-
-    if (state.lastNotice) {
-      result.textContent = t(`notice.${state.lastNotice}`);
-      result.dataset.status = 'playing';
-      return;
-    }
-
-    const hint = this.state ? findSuggestedMove(this.state) : undefined;
-    result.textContent = hint ? t('result.hasMove') : t('result.noMove');
+    // Only real events get a pencil note; an empty line is the normal state.
+    result.textContent = state.lastNotice ? t(`notice.${state.lastNotice}`) : '';
     result.dataset.status = 'playing';
   }
 
@@ -184,10 +184,10 @@ export class HudController {
     }
   };
 
-  private setText(key: string, value: string): void {
+  private setHtml(key: string, html: string): void {
     const node = this.root.querySelector(`[data-hud="${key}"]`);
     if (node) {
-      node.textContent = value;
+      node.innerHTML = html;
     }
   }
 }
