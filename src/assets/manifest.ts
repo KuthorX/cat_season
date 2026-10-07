@@ -17,12 +17,19 @@ export const ASSET_KEYS = {
     thread: 'fx-thread',
   },
   audio: {
-    music: 'audio-cozy-puzzle-ingame',
+    music: 'audio-sampler-waltz',
     click: 'audio-ui-click',
-    invalid: 'audio-ui-invalid',
-    match: 'audio-match-pop',
-    shuffle: 'audio-shuffle',
+    confirm: 'audio-ui-confirm',
     hover: 'audio-tile-hover',
+    select: 'audio-tile-select',
+    invalid: 'audio-ui-invalid',
+    match: 'audio-match-stitch',
+    cascade: 'audio-cascade',
+    shuffle: 'audio-shuffle',
+    snip: 'audio-scissor-snip',
+    hint: 'audio-hint-thimble',
+    win: 'audio-win-sampler',
+    lose: 'audio-lose-thread',
   },
 };
 
@@ -43,15 +50,34 @@ export const ASSET_PATHS = {
     stitch: 'assets/fx/fx-stitch.png',
     thread: 'assets/fx/fx-thread.png',
   },
+  /** Each audio entry is a base path: `.ogg` (Opus) first, `.mp3` as the fallback. Built by tools/audio/build.py. */
   audio: {
-    music: 'assets/audio/cozy-puzzle-ingame.ogg',
-    click: 'assets/audio/ui-click.ogg',
-    invalid: 'assets/audio/ui-invalid.ogg',
-    match: 'assets/audio/match-pop.ogg',
-    shuffle: 'assets/audio/shuffle.ogg',
-    hover: 'assets/audio/tile-hover.ogg',
-  },
+    music: 'assets/audio/sampler-waltz',
+    click: 'assets/audio/ui-click',
+    confirm: 'assets/audio/ui-confirm',
+    hover: 'assets/audio/tile-hover',
+    select: 'assets/audio/tile-select',
+    invalid: 'assets/audio/ui-invalid',
+    match: 'assets/audio/match-stitch',
+    cascade: 'assets/audio/cascade',
+    shuffle: 'assets/audio/shuffle',
+    snip: 'assets/audio/scissor-snip',
+    hint: 'assets/audio/hint-thimble',
+    win: 'assets/audio/win-sampler',
+    lose: 'assets/audio/lose-thread',
+  } satisfies Record<AudioCue, string>,
 };
+
+export type AudioCue = keyof typeof ASSET_KEYS.audio;
+
+/** Opus is smaller and loops sample-exact; MP3 covers browsers that cannot decode Ogg. */
+export function audioSources(cue: AudioCue): Phaser.Types.Loader.FileTypes.AudioFileURLConfig[] {
+  const base = ASSET_PATHS.audio[cue];
+  return [
+    { type: 'opus', url: `${base}.ogg` },
+    { type: 'mp3', url: `${base}.mp3` },
+  ];
+}
 
 /** Thread colours, matching the main colour of each motif in tools/art/generate.py. */
 export const THREAD = {

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ASSET_KEYS, ASSET_PATHS, THREAD } from '../assets/manifest';
+import { ASSET_KEYS, ASSET_PATHS, THREAD, audioSources, type AudioCue } from '../assets/manifest';
 import menuCat from '../assets/art/menu-cat.webp';
 import sewingButton from '../assets/art/sewing-button.webp';
 import { parseShotMode } from '../debug/shotMode';
@@ -55,6 +55,7 @@ export class GameplayScene extends Phaser.Scene {
   private lastBoardSignature?: string;
   private music?: Phaser.Sound.BaseSound;
   private audioStarted = false;
+  private endCuePlayed = false;
   private menuRoot?: HTMLElement;
   private menuLocaleButton?: HTMLButtonElement;
   private unsubscribeMenuLocale?: () => void;
@@ -74,11 +75,12 @@ export class GameplayScene extends Phaser.Scene {
     }
     this.load.image(ASSET_KEYS.fx.stitch, ASSET_PATHS.fx.stitch);
     this.load.image(ASSET_KEYS.fx.thread, ASSET_PATHS.fx.thread);
-    this.load.audio(ASSET_KEYS.audio.click, ASSET_PATHS.audio.click);
-    this.load.audio(ASSET_KEYS.audio.invalid, ASSET_PATHS.audio.invalid);
-    this.load.audio(ASSET_KEYS.audio.match, ASSET_PATHS.audio.match);
-    this.load.audio(ASSET_KEYS.audio.shuffle, ASSET_PATHS.audio.shuffle);
-    this.load.audio(ASSET_KEYS.audio.hover, ASSET_PATHS.audio.hover);
+    // The SFX are a few KB each; only the music is deferred (see loadMusic).
+    for (const cue of Object.keys(ASSET_KEYS.audio) as AudioCue[]) {
+      if (cue !== 'music') {
+        this.load.audio(ASSET_KEYS.audio[cue], audioSources(cue));
+      }
+    }
   }
 
   create(): void {
@@ -131,6 +133,7 @@ export class GameplayScene extends Phaser.Scene {
     this.endScreen?.hide();
     this.cleanupGameState({ keepHud: true });
     this.state = this.createRandomPuzzle();
+    this.endCuePlayed = false;
     this.lastBoardSignature = this.boardSignature(this.state.board);
 
     this.createBoardFrame();
@@ -226,7 +229,7 @@ export class GameplayScene extends Phaser.Scene {
 
   private handlePlayAgain = (): void => {
     this.ensureAudioStarted();
-    this.playSound(ASSET_KEYS.audio.click, { volume: 0.42 });
+    this.playSound(ASSET_KEYS.audio.confirm, { volume: 0.4 });
     this.startNewPuzzle();
   };
 
@@ -293,7 +296,7 @@ export class GameplayScene extends Phaser.Scene {
 
   private handleStartClick = (): void => {
     this.ensureAudioStarted();
-    this.playSound(ASSET_KEYS.audio.click, { volume: 0.42 });
+    this.playSound(ASSET_KEYS.audio.confirm, { volume: 0.4 });
     this.startNewPuzzle();
   };
 
@@ -322,7 +325,7 @@ export class GameplayScene extends Phaser.Scene {
       return;
     }
 
-    this.load.audio(ASSET_KEYS.audio.music, [{ type: 'opus', url: ASSET_PATHS.audio.music }]);
+    this.load.audio(ASSET_KEYS.audio.music, audioSources('music'));
     this.load.once(Phaser.Loader.Events.COMPLETE, this.attachMusic);
     this.load.start();
   }
@@ -334,7 +337,7 @@ export class GameplayScene extends Phaser.Scene {
 
     this.music = this.sound.add(ASSET_KEYS.audio.music, {
       loop: true,
-      volume: 0.18,
+      volume: 0.35,
     });
     this.startMusic();
   };
@@ -342,6 +345,20 @@ export class GameplayScene extends Phaser.Scene {
   private startMusic(): void {
     if (this.audioStarted && this.music && !this.music.isPlaying) {
       this.music.play();
+    }
+  }
+
+  /** Chain reactions answer the match a little higher each time; an earned power-up gets a small confirm. */
+  private cueMoveFollowUps(cascades: number, rewarded: boolean): void {
+    if (cascades > 1) {
+      const timer = this.time.delayedCall(560, () =>
+        this.playSound(ASSET_KEYS.audio.cascade, { volume: 0.38, detune: Math.min(cascades - 2, 4) * 100 }),
+      );
+      this.activeTimers.push(timer);
+    }
+    if (rewarded) {
+      const timer = this.time.delayedCall(900, () => this.playSound(ASSET_KEYS.audio.confirm, { volume: 0.3, detune: 700 }));
+      this.activeTimers.push(timer);
     }
   }
 
@@ -410,13 +427,13 @@ export class GameplayScene extends Phaser.Scene {
 
     const selected = this.selected;
     if (!selected) {
-      this.playSound(ASSET_KEYS.audio.click, { volume: 0.38 });
+      this.playSound(ASSET_KEYS.audio.select, { volume: 0.5 });
       this.setSelected(point);
       return;
     }
 
     if (this.pointsEqual(selected, point)) {
-      this.playSound(ASSET_KEYS.audio.click, { volume: 0.3 });
+      this.playSound(ASSET_KEYS.audio.click, { volume: 0.4 });
       this.setSelected(undefined);
       return;
     }
@@ -435,7 +452,8 @@ export class GameplayScene extends Phaser.Scene {
     this.state = result.state;
     this.setSelected(undefined);
     this.setHovered(undefined);
-    this.playSound(ASSET_KEYS.audio.match, { volume: 0.46 });
+    this.playSound(ASSET_KEYS.audio.match, { volume: 0.4 });
+    this.cueMoveFollowUps(result.cascades, result.rewardedPowerUp !== undefined);
     this.animateAcceptedMove(selected, point, result.initialMatches);
     const timer = this.time.delayedCall(720, () => {
       const targetBoard = result.boardBeforeRepair ?? result.state.board;
@@ -727,7 +745,7 @@ export class GameplayScene extends Phaser.Scene {
     }
 
     this.ensureAudioStarted();
-    this.playSound(ASSET_KEYS.audio.click, { volume: 0.28 });
+    this.playSound(ASSET_KEYS.audio.hint, { volume: 0.22 });
     this.clearHint();
     const hint = findSuggestedMove(this.state);
     if (!hint) {
@@ -748,10 +766,11 @@ export class GameplayScene extends Phaser.Scene {
     }
 
     this.ensureAudioStarted();
-    this.playSound(ASSET_KEYS.audio.click, { volume: 0.36 });
+    this.playSound(ASSET_KEYS.audio.click, { volume: 0.45 });
     if (kind === 'snack') {
       const result = usePowerUp(this.state, kind);
       if (result.accepted) {
+        this.playSound(ASSET_KEYS.audio.confirm, { volume: 0.32 });
         this.state = result.state;
         if (result.boardBeforeRepair) {
           this.renderBoard(result.boardBeforeRepair);
@@ -793,7 +812,7 @@ export class GameplayScene extends Phaser.Scene {
     this.state = result.state;
     this.setSelected(undefined);
     this.setHovered(undefined);
-    this.playSound(ASSET_KEYS.audio.match, { volume: 0.46, detune: kind === 'wand' ? 80 : -60 });
+    this.playSound(ASSET_KEYS.audio.snip, { volume: 0.45, detune: kind === 'wand' ? 80 : -60 });
     this.animateClearCells(result.affectedCells);
     const timer = this.time.delayedCall(520, () => {
       const targetBoard = result.boardBeforeRepair ?? result.state.board;
@@ -924,7 +943,7 @@ export class GameplayScene extends Phaser.Scene {
   ): void {
     this.renderBoard(boardBeforeRepair);
     this.cameras.main.shake(130, 0.002);
-    this.playSound(ASSET_KEYS.audio.shuffle, { volume: 0.36 });
+    this.playSound(ASSET_KEYS.audio.shuffle, { volume: 0.3 });
 
     if (shuffleMoves.length === 0) {
       this.renderBoard(finalState.board);
@@ -980,6 +999,10 @@ export class GameplayScene extends Phaser.Scene {
   private updateHud(): void {
     this.hud?.update(this.state);
     if (this.state.status !== 'playing') {
+      if (!this.endCuePlayed) {
+        this.endCuePlayed = true;
+        this.playSound(this.state.status === 'won' ? ASSET_KEYS.audio.win : ASSET_KEYS.audio.lose, { volume: 0.32 });
+      }
       this.endScreen?.show(this.state);
     }
   }
