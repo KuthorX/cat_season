@@ -4,3 +4,4 @@ tmp/
 .omx/
 .DS_Store
 *.log
+__pycache__/

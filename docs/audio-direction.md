@@ -11,86 +11,106 @@ stitching.
 Three ideas tie the sound to the game:
 
 - **Three.** Match-3 becomes 3/4 time. The waltz has three beats to a bar, and
-  its signature "three stitches" motif (three repeated celesta notes and a
-  lift) opens every section. The match sound is three quick stitch pulls.
+  its signature "three stitches" motif (three repeated plucked notes and a
+  lift) opens the tune and returns in the coda. The match sound is three quick stitch pulls.
 - **One key.** Everything pitched sits in D dorian (D E F G A B C), so a match
   never clashes with the music. The bright raised 6th (B natural) gives the
   autumn mood: wistful, not sad.
 - **Dry and close.** SFX have no reverb and are short, as if the sewing box
-  were on your lap. Only the music has a little room around it.
+  were on your lap. Only the music (and the win fanfare) has a little room.
 
 ## Music
 
 | Track | File | Length | Tempo / metre | Mode | Loudness |
 |---|---|---|---|---|---|
-| The Sampler Waltz (menu + gameplay, one continuous loop) | `public/assets/audio/sampler-waltz.ogg` (Opus 80 kbps, 1.07 MB) + `.mp3` fallback (96 kbps) | 90.000 s (40 bars) | 80 BPM, 3/4 | D dorian, B section in F major | -18.0 LUFS integrated, -5.1 dBTP |
+| The Sampler Waltz (menu + gameplay, one continuous loop) | `public/assets/audio/sampler-waltz.ogg` (Opus 80 kbps, 1.3 MB) + `.mp3` fallback (96 kbps) | 96.000 s (48 bars) | 90 BPM, 3/4 | D dorian, B sections in F major | -18.0 LUFS integrated, -6.4 dBTP |
 
-**Instrumentation** (General MIDI from the MS Basic SoundFont): clarinet
-(melody), bassoon (B-section melody), flute (high sustained counter-line),
-nylon guitar (the "pah-pah" of the waltz on beats 2 and 3), pizzicato strings
-(the "oom" on beat 1), celesta (needle glints and the three-stitch motif),
-music box (arpeggios in the last A section) and slow strings (a quiet bed in
-the middle 24 bars). No drums: embroidery is quiet.
+**Instrumentation** (2026 rescore; every part rendered offline, headless, from
+synth presets and a GM SoundFont):
 
-**Cue sheet** (bar numbers and times from the loop start):
+| Part | Source | Role |
+|---|---|---|
+| Melody (A sections, coda) | Serum 2 `KY - Delicacy` | clean, delicate keys: the hummed tune |
+| Broken chords (B sections) | Serum 2 `KY - Delicacy` | quiet eighth-note arpeggios under the flute |
+| B-section melody | Serum 2 `WIND - Flute` | breathy flute, the warmest part |
+| Counter-line (A') | Serum 2 `WIND - Flute` | long notes, far back in the mix |
+| Three-stitch motif | Serum 2 `PL - Plucked Bottle` | hollow plucked thread, intro and coda |
+| Music-box twinkles (A'') | Serum 2 `BL - Kinderjoy` | very quiet, low-passed at 7 kHz |
+| "Pah-pah" on beats 2 and 3 | Vital `Easy Mallet` (Yuli Yolo pack) | felt marimba triads |
+| Pad bed (bars 13-44) | Vital `Analog Pad` (In The Mix pack) | warm, dark, high shelf +4 dB so it is heard |
+| "Oom" bass on beat 1 | MS Basic GM 32 Acoustic Bass | upright bass, root/fifth walk in B |
+| Brushes (bars 21-44) | MS Basic GM brush kit (drum channel, program 40) | soft kick, brush taps, ride |
+
+**Cue sheet** (bar numbers and times from the loop start; one bar = 2 s):
 
 | Bars | Time | Section | What you should hear |
 |---|---|---|---|
-| 1-4 | 0:00-0:09 | Intro | Guitar and pizz waltz alone, Dm / G. The celesta plays the three-stitch motif (A A A then D up high) in bars 1 and 3. |
-| 5-12 | 0:09-0:27 | A | The clarinet takes the tune: a falling A-G-F, then a climb through B natural (the dorian colour). Ends on A7, unresolved. |
-| 13-20 | 0:27-0:45 | A' | The clarinet answers and comes home to low D. The strings bed and a high flute (F, A, E, F) come in. |
-| 21-28 | 0:45-1:03 | B | Relative major, F. The bassoon sings in the low register while the flute holds long notes above it. Pizz plays root and fifth. The warmest part. |
-| 29-36 | 1:03-1:21 | A'' | The clarinet tune returns, with music-box arpeggios twinkling two octaves up. It ends on A minor instead of D. |
-| 37-40 | 1:21-1:30 | Coda | The celesta climbs Dm, G, Bb and A7 arpeggios and hands back to bar 1. There is no ending, so the loop is invisible. |
+| 1-4 | 0:00-0:08 | Intro | Bass and mallet waltz alone, Dm / G. The plucked bottle plays the three-stitch motif (A A A then D) in bar 1 and (F F F then A) in bar 3. |
+| 5-12 | 0:08-0:24 | A | The keys take the tune, which opens with the motif itself, climbs through B natural (the dorian colour) and ends on A7. |
+| 13-20 | 0:24-0:40 | A' | A higher answer that comes home to D. The pad and a quiet flute counter-line enter. |
+| 21-28 | 0:40-0:56 | B | F major. The flute sings over keys arpeggios; brushes come in. |
+| 29-36 | 0:56-1:12 | B' | The flute climbs to Bb5 and turns back through E half-diminished to A7. |
+| 37-44 | 1:12-1:28 | A'' | The keys tune returns with music-box twinkles two octaves up. |
+| 45-48 | 1:28-1:36 | Coda | The stitch motif climbs Bb, Gm, Em7b5, A7 and hands back to bar 1. There is no ending, so the loop is invisible. |
 
-**Seamless loop.** The score is rendered three times in one MIDI file. The
-middle pass is cut out sample-exactly (40 bars at 80 BPM = 4,320,000 samples
-at 48 kHz), so bar 1 already carries the reverb tail of bar 40. The build
-fails if the second and third passes are not bit-identical. Measured on the
-decoded Opus file, the step across the seam is 0.0006 against a 99th
-percentile sample step of 0.037, so there is no click.
+**Seamless loop.** 48 bars at 90 BPM is exactly 96 s. The render folds the
+reverb and release tail that rings past bar 48 back onto bar 1 (audiokit
+`loop`), and the 44.1 to 48 kHz resample runs on three tiled copies with the
+middle one kept, so both edges see their true neighbours. Measured on the
+decoded Opus file: 4,608,000 samples, step across the seam 0.0095 against a
+99th-percentile step of 0.029, so there is no click.
 
 **Loading.** The music never blocks startup. It is fetched after the boot
 loader finishes (`GameplayScene.loadMusic`) and starts on the first user
-gesture (Web Audio unlock), exactly as before. In game it plays at volume
-0.35. The old track was -12 LUFS at 0.18, so the perceived level is about the
-same.
+gesture (Web Audio unlock). In game it plays at volume 0.35, the same as
+before at the same -18 LUFS.
 
 ## Sound effects
 
-All SFX are mono 48 kHz, peak-normalised to -3 dBFS before encoding, with
-true peak at or below -2.3 dBTP after encoding. Each ships as Opus `.ogg`
-(0.7-18 KB) plus an `.mp3` fallback and is preloaded, which is about 60 KB of
-Opus in total. "Loudness" is integrated LUFS with the file padded to 0.5 s.
-The per-call volume in `GameplayScene` evens them out.
+All SFX are mono 48 kHz. Each layers at least two sources: a hit cut from the
+rendered "source sheet" (`tools/audio/sfx_sheet.py`: Vital `Ceramic`, Serum 2
+`PL - Plucked Bottle` and `BL - Kinderjoy`, Vital `Easy Mallet`, MS Basic GM
+115 Woodblock) plus another preset hit or numpy foley (band-passed noise for
+thread and scissors, a sine thud). Each cue is high-passed at 40 Hz,
+normalised to -16 LUFS with the true peak held at or below -1 dBTP by gain only,
+then encoded as Opus `.ogg` plus an `.mp3` fallback. Short ticks reach the peak
+ceiling first, so they land below -16 LUFS. `AUDIO_TRIM` in
+`src/assets/manifest.ts` is the old-minus-new loudness of each file, so the
+per-call volumes in `GameplayScene` keep the balance they were tuned for.
 
-| Event | File | Length | Sound | Pitch / timbre | Loudness |
-|---|---|---|---|---|---|
-| Deselect a tile, arm a power-up | `ui-click` | 0.10 s | A bone sewing button tapped on wood | Wooden modes at 1.85, 2.93 and 4.41 kHz with a 420 Hz body. No pitch. | -26.4 |
-| Start, Play again, snack used, power-up earned (+7 semitones) | `ui-confirm` | 0.51 s | A button tap, then a plucked D5 to A5 | A bright pluck, an open fifth upward | -18.9 |
-| Hover over a tile | `tile-hover` | 0.11 s | A whisper of thread drawn through cloth | Band-passed noise, 2.5-7 kHz, very soft in game (0.12) | -22.5 |
-| Pick a tile | `tile-select` | 0.17 s | A needle piercing the linen, plus a tiny A5 pluck | A high "tk" then a small ring | -28.8 |
-| Illegal swap or failed power-up | `ui-invalid` | 0.31 s | Thread snagging: two muted plucks, G3 then F#3, over a soft 110 Hz thud | Low, dull, a falling semitone. Never a buzzer. | -22.6 |
-| Accepted match | `match-stitch` | 0.59 s | Three stitch pulls (swish, pluck) climbing D5, F5, A5 | A rising D minor triad, dorian-friendly | -17.4 |
-| Each cascade after the first (+1 semitone per extra cascade) | `cascade` | 0.48 s | A faster, brighter run of three stitches, A5, C6, E6 | Higher and brighter than the match | -20.0 |
-| Board auto-reshuffle | `shuffle` | 0.49 s | A knock on the embroidery hoop and a rustle of linen | Wooden 240 Hz knock and grainy 0.8-4 kHz rustle | -15.7 |
-| Wand (row) / stamp (column) power-up (+80 / -60 cents) | `scissor-snip` | 0.21 s | Small embroidery scissors: two blade snips | Metallic 3.1, 4.9 and 7.3 kHz ring with a sheared noise | -23.2 |
-| Hint | `hint-thimble` | 0.31 s | A brass thimble tinked twice | A pure 2.35 kHz tone with inharmonic partials | -16.9 |
-| Puzzle won | `win-sampler` | 1.94 s | A music box runs up D5, F5, A5, C6, D6, then rings an A-D-F chord over a plucked D-A-F | Bell-like, warm, resolved | -15.3 |
-| Out of moves | `lose-thread` | 1.81 s | A loose thread unravelling: soft plucks falling A4, G4, F4, E4, landing on a low D octave | Muted and gentle: consoling, not mocking | -16.1 |
+| Event | File | Length | Layers | Loudness (LUFS, padded to 0.5 s) |
+|---|---|---|---|---|
+| Deselect a tile, arm a power-up | `ui-click` | 0.11 s | Woodblock tap + Ceramic tick: a bone button on walnut | -21.2 |
+| Start, Play again, snack used, power-up earned (+7 semitones) | `ui-confirm` | 0.51 s | Woodblock tap, bottle plucks D5 then A5, Kinderjoy D5 shimmer | -16.0 |
+| Hover over a tile | `tile-hover` | 0.12 s | Noise swish (thread through linen) + a faint Ceramic tick | -20.9 |
+| Pick a tile | `tile-select` | 0.18 s | Ceramic needle tick, noise pierce, tiny bottle A5 | -17.9 |
+| Illegal swap or failed power-up | `ui-invalid` | 0.33 s | Mallet G2 knock, low-passed bottle G3 then F#3, 110 Hz thud | -15.9 |
+| Accepted match | `match-stitch` | 0.67 s | Three swish + bottle pulls D5, F5, A5, Kinderjoy A5 on top | -14.9 |
+| Each cascade after the first (+1 semitone per extra cascade) | `cascade` | 0.52 s | Faster swish + bottle A5, C6, E6, Ceramic sparkle | -16.0 |
+| Board auto-reshuffle | `shuffle` | 0.49 s | Linen rustle grains + woodblock and mallet hoop knock | -17.5 |
+| Wand (row) / stamp (column) power-up (+80 / -60 cents) | `scissor-snip` | 0.22 s | Two blade snips: sheared noise + Ceramic ticks | -20.3 |
+| Hint | `hint-thimble` | 0.33 s | Kinderjoy tine + Ceramic tick, tinked twice | -16.0 |
+| Puzzle won | `win-sampler` | 1.94 s | Kinderjoy + bottle run D5-F5-A5-C6-D6, then Kinderjoy A-D-F over mallet D-A-F, small room | -16.0 |
+| Out of moves | `lose-thread` | 1.81 s | Bottle plucks falling A4-G4-F4-E4 onto D4 with mallet D3/D4, low-passed | -16.0 |
 
 ## Rebuilding
 
 ```sh
-python3 tools/audio/build.py --report
+arch -arm64 /tmp/audiokit/venv/bin/python tools/audio/build.py --report
 ```
 
-This needs numpy, scipy, fluidsynth and ffmpeg (with libopus and libmp3lame).
-It reads the MS Basic SoundFont from the MuseScore 4 install path. The build
-is deterministic: fixed seeds for humanisation and noise.
+Steps: `prepare` (`score.py` and `sfx_sheet.py` write MIDI and two audiokit
+render specs into `/tmp/cat_season_audio`), `render` (two `render.py` runs
+serialised by `lockf` on `/tmp/audiokit/render.lock`; Vital and Serum 2 are
+hosted headless by pedalboard, no window, no playback) and `assemble`
+(`sfx.py` layering, music resample, Opus/MP3 encode). Steps can be run alone,
+e.g. `build.py assemble`. It needs the audiokit toolchain, the Vital and
+Serum 2 factory/pack presets named above, fluidsynth with the MuseScore 4
+MS Basic SoundFont, and ffmpeg with libopus and libmp3lame. Seeds are fixed.
 
 ## Licenses
 
-See `public/assets/audio/CREDITS.md`. The music is original and rendered with
-the MIT-licensed MS Basic SoundFont (its license is committed alongside). The
-SFX are synthesised from scratch. No third-party samples ship.
+See `public/assets/audio/CREDITS.md`. Music and SFX were composed
+programmatically by AI (Claude) and rendered with Vital, Serum 2 and the
+MIT-licensed MS Basic SoundFont (its license is committed alongside). No
+third-party sample libraries are used and no bare preset hit ships on its own.

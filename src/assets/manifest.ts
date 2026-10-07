@@ -70,6 +70,36 @@ export const ASSET_PATHS = {
 
 export type AudioCue = keyof typeof ASSET_KEYS.audio;
 
+/**
+ * Per-file gain applied on top of each call's volume. The 2026 rescore masters every SFX to about
+ * -16 LUFS (short ticks are peak-limited lower); these trims (old LUFS - new LUFS, as linear gain)
+ * keep the in-game balance the call volumes were tuned for. Values from `tools/audio/build.py --report`.
+ */
+export const AUDIO_TRIM: Record<AudioCue, number> = {
+  music: 1,
+  click: 0.55,
+  confirm: 0.72,
+  hover: 0.83,
+  select: 0.29,
+  invalid: 0.46,
+  match: 0.75,
+  cascade: 0.63,
+  shuffle: 1.23,
+  snip: 0.72,
+  hint: 0.9,
+  win: 1.08,
+  lose: 0.99,
+};
+
+const TRIM_BY_KEY = new Map<string, number>(
+  (Object.keys(ASSET_KEYS.audio) as AudioCue[]).map((cue) => [ASSET_KEYS.audio[cue], AUDIO_TRIM[cue]]),
+);
+
+/** The playback volume for an audio key: the call's volume times that file's trim. */
+export function trimmedVolume(key: string, volume = 1): number {
+  return volume * (TRIM_BY_KEY.get(key) ?? 1);
+}
+
 /** Opus is smaller and loops sample-exact; MP3 covers browsers that cannot decode Ogg. */
 export function audioSources(cue: AudioCue): Phaser.Types.Loader.FileTypes.AudioFileURLConfig[] {
   const base = ASSET_PATHS.audio[cue];

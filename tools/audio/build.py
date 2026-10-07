@@ -1,15 +1,19 @@
 """Rebuild every Cat Season audio asset into public/assets/audio.
 
-Needs python3 with numpy + scipy, fluidsynth and ffmpeg (libopus, libmp3lame).
+Needs the offline audiokit toolchain in /tmp/audiokit (Vital + Serum 2 hosted
+headless by pedalboard, fluidsynth + MS Basic.sf3, never plays audio or opens
+windows) and ffmpeg with libopus + libmp3lame. Run with the audiokit venv:
 
-  python3 tools/audio/build.py            # music + SFX
-  python3 tools/audio/build.py --report   # also print duration / LUFS / true peak
+  PY="arch -arm64 /tmp/audiokit/venv/bin/python"
+  $PY tools/audio/build.py            # prepare -> render -> assemble
+  $PY tools/audio/build.py --report   # also print duration / LUFS / true peak
 
-The waltz is rendered as three identical passes; the middle pass is cut out so
-the reverb tail of the previous bar is already present at the loop start,
-which makes the loop seam bit-exact. It is normalised to -18 LUFS with a
-single linear gain (no limiter), then encoded to Opus (primary) and MP3
-(fallback for browsers without Ogg Opus).
+Steps:
+  prepare   score.py + sfx_sheet.py write MIDI and two audiokit specs
+  render    two render.py runs (music, SFX source sheet), serialised by the
+            shared lockf on /tmp/audiokit/render.lock
+  assemble  music: wrap-around resample 44.1 -> 48 kHz (loop stays seamless),
+            SFX: sfx.py layering; then Opus (primary) + MP3 (fallback)
 """
 
 from __future__ import annotations
@@ -22,20 +26,21 @@ import tempfile
 from pathlib import Path
 
 import numpy as np
-from scipy.io import wavfile
+import soundfile as sf
+from scipy.signal import resample_poly
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 OUT = ROOT / "public" / "assets" / "audio"
-SOUNDFONT = Path("/Applications/MuseScore 4.app/Contents/Resources/sound/MS Basic.sf3")
-SR = 48_000
-LOOP_SAMPLES = 40 * 108_000  # 40 bars of 3/4 at 80 BPM = 90 s
-MUSIC_LUFS = -18.0
+WORK = Path("/tmp/cat_season_audio")
+AUDIOKIT = Path("/tmp/audiokit")
 MUSIC_NAME = "sampler-waltz"
+SR = 48_000
 
 sys.path.insert(0, str(HERE))
 import score  # noqa: E402
 import sfx  # noqa: E402
+import sfx_sheet  # noqa: E402
 
 
 def run(*args: str) -> str:
@@ -48,58 +53,64 @@ def loudness(path: Path) -> dict[str, float]:
     summary = log[log.rfind("Summary:") :]
     lufs = float(re.search(r"I:\s+(-?[\d.]+|-inf) LUFS", summary).group(1))
     peak = float(re.search(r"Peak:\s+(-?[\d.]+|-inf) dBFS", summary).group(1))
-    momentary = [float(v) for v in re.findall(r"M:\s*(-?[\d.]+)", log)]
     duration = float(run("ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)).strip())
-    return {"duration": duration, "lufs": lufs, "max_momentary": max(momentary, default=-70.0), "true_peak": peak}
+    return {"duration": duration, "lufs": lufs, "true_peak": peak}
 
 
-def build_music(tmp: Path) -> None:
-    midi = tmp / "waltz.mid"
-    raw = tmp / "waltz-raw.wav"
-    score.build(str(midi))
-    run(
-        "fluidsynth", "-ni", "-q", "-g", "0.6", "-r", str(SR), "-o", "synth.chorus.active=0",
-        "-F", str(raw), str(SOUNDFONT), str(midi),
-    )
-    rate, data = wavfile.read(raw)
-    assert rate == SR
-    audio = data.astype(np.float64) / 32768
-    first, second = audio[LOOP_SAMPLES : 2 * LOOP_SAMPLES], audio[2 * LOOP_SAMPLES : 3 * LOOP_SAMPLES]
-    if not np.array_equal(first, second):
-        raise SystemExit("render passes differ; the loop would not be seamless")
+def prepare() -> None:
+    score.main(str(WORK))
+    sfx_sheet.main(str(WORK))
 
-    loop = tmp / "waltz-loop.wav"
-    wavfile.write(loop, SR, (first * 32767).astype(np.int16))
-    gain_db = MUSIC_LUFS - loudness(loop)["lufs"]
-    leveled = np.clip(first * 10 ** (gain_db / 20), -1, 1)
-    if np.max(np.abs(leveled)) > 10 ** (-1.5 / 20):
-        raise SystemExit("music would clip at -18 LUFS; lower the mix instead of limiting")
-    wavfile.write(loop, SR, (leveled * 32767).astype(np.int16))
-    run("ffmpeg", "-y", "-v", "error", "-i", str(loop), "-c:a", "libopus", "-b:a", "80k", "-vbr", "on", str(OUT / f"{MUSIC_NAME}.ogg"))
-    run("ffmpeg", "-y", "-v", "error", "-i", str(loop), "-c:a", "libmp3lame", "-b:a", "96k", str(OUT / f"{MUSIC_NAME}.mp3"))
+
+def render() -> None:
+    for name in ("music_spec.json", "sfx_spec.json"):
+        print(run(
+            "lockf", "-t", "3600", str(AUDIOKIT / "render.lock"),
+            "arch", "-arm64", str(AUDIOKIT / "venv/bin/python"), str(AUDIOKIT / "render.py"),
+            str(WORK / name), "--report",
+        )[-600:])
+
+
+def build_music() -> None:
+    data, rate = sf.read(WORK / "waltz.wav", always_2d=True)
+    loop = data.T
+    if loop.shape[1] != round(score.LOOP_SECONDS * rate):
+        raise SystemExit(f"music loop is {loop.shape[1]} samples, expected {score.LOOP_SECONDS} s")
+    # resample three copies and keep the middle so both loop edges see their true neighbours
+    tiled = np.concatenate([loop, loop, loop], axis=1)
+    up = resample_poly(tiled, SR // 300, rate // 300, axis=1)
+    n = round(score.LOOP_SECONDS * SR)
+    middle = up[:, n : 2 * n]
+    wav = WORK / "waltz-48k.wav"
+    sf.write(wav, middle.T.astype(np.float32), SR, subtype="PCM_16")
+    run("ffmpeg", "-y", "-v", "error", "-i", str(wav), "-c:a", "libopus", "-b:a", "80k", "-vbr", "on", str(OUT / f"{MUSIC_NAME}.ogg"))
+    run("ffmpeg", "-y", "-v", "error", "-i", str(wav), "-c:a", "libmp3lame", "-b:a", "96k", str(OUT / f"{MUSIC_NAME}.mp3"))
 
 
 def build_sfx(tmp: Path) -> None:
-    sfx.main(str(tmp / "sfx"))
+    sfx.main(str(WORK), str(tmp))
     for name in sfx.CUES:
-        wav = tmp / "sfx" / f"{name}.wav"
+        wav = tmp / f"{name}.wav"
         run("ffmpeg", "-y", "-v", "error", "-i", str(wav), "-c:a", "libopus", "-b:a", "48k", str(OUT / f"{name}.ogg"))
         run("ffmpeg", "-y", "-v", "error", "-i", str(wav), "-c:a", "libmp3lame", "-b:a", "64k", str(OUT / f"{name}.mp3"))
 
 
+def assemble() -> None:
+    OUT.mkdir(parents=True, exist_ok=True)
+    build_music()
+    with tempfile.TemporaryDirectory() as name:
+        build_sfx(Path(name))
+
+
 def report() -> None:
-    rows = {}
-    for path in sorted(OUT.glob("*.ogg")):
-        rows[path.name] = {**loudness(path), "bytes": path.stat().st_size}
+    rows = {path.name: {**loudness(path), "bytes": path.stat().st_size} for path in sorted(OUT.glob("*.ogg"))}
     print(json.dumps(rows, indent=1))
 
 
 def main() -> None:
-    OUT.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory() as name:
-        tmp = Path(name)
-        build_music(tmp)
-        build_sfx(tmp)
+    steps = [arg for arg in sys.argv[1:] if not arg.startswith("--")] or ["prepare", "render", "assemble"]
+    for step in steps:
+        {"prepare": prepare, "render": render, "assemble": assemble}[step]()
     if "--report" in sys.argv:
         report()
 

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ASSET_KEYS, ASSET_PATHS, THREAD, audioSources, type AudioCue } from '../assets/manifest';
+import { ASSET_KEYS, ASSET_PATHS, THREAD, audioSources, trimmedVolume, type AudioCue } from '../assets/manifest';
 import menuCat from '../assets/art/menu-cat.webp';
 import sewingButton from '../assets/art/sewing-button.webp';
 import { parseShotMode } from '../debug/shotMode';
@@ -367,7 +367,7 @@ export class GameplayScene extends Phaser.Scene {
       return;
     }
 
-    this.sound.play(key, config);
+    this.sound.play(key, { ...config, volume: trimmedVolume(key, config?.volume) });
   }
 
   private renderBoard(board: Board = this.state.board): void {
